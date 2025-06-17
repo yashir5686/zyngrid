@@ -22,8 +22,8 @@ import {
 } from "@/components/ui/select";
 
 
-const CANVAS_WIDTH = 1400; // Increased width for longer levels
-const CANVAS_HEIGHT = 450;
+const VIEWPORT_WIDTH = 800; // The visible width of the game area on screen
+const VIEWPORT_HEIGHT = 450; // The visible height of the game area on screen
 const PLAYER_WIDTH = 20;
 const PLAYER_HEIGHT = 30;
 const GRAVITY = 0.6;
@@ -54,6 +54,8 @@ export default function PixelJumperGame() {
   const [score, setScore] = useState(0);
   const [levelHighScore, setLevelHighScore] = useState(0);
   const [maxUnlockedLevel, setMaxUnlockedLevel] = useState(1);
+  const [cameraOffsetX, setCameraOffsetX] = useState(0);
+  const [levelContentWidth, setLevelContentWidth] = useState(VIEWPORT_WIDTH);
   
   const [colorValues, setColorValues] = useState({
     background: '220 11% 15%',
@@ -63,8 +65,8 @@ export default function PixelJumperGame() {
     destructive: '0 72% 51%',
     card: '220 11% 20%',
     muted: '220 11% 22%',
-    enemyColor: '30 100% 50%', // Orange for enemies
-    trapColor: '0 100% 50%', // Red for traps
+    enemyColor: '30 100% 50%', 
+    trapColor: '0 100% 50%', 
   });
 
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -86,14 +88,14 @@ export default function PixelJumperGame() {
     setMaxUnlockedLevel(getPixelJumperMaxUnlockedLevel());
   }, []);
 
-  const generateProceduralLevelContent = useCallback((levelIdx: number): Omit<PixelJumperLevel, 'id' | 'name'> => {
+  const generateProceduralLevelContent = useCallback((levelIdx: number): Omit<PixelJumperLevel, 'id' | 'name'> & { calculatedLevelWidth: number } => {
     const platforms: Platform[] = [];
     const foodItems: FoodItem[] = [];
     const enemies: Enemy[] = [];
     const traps: Trap[] = [];
     
     let currentX = 50;
-    const startPlatformY = CANVAS_HEIGHT - 50 - getRandomInt(0, 50);
+    const startPlatformY = VIEWPORT_HEIGHT - 50 - getRandomInt(0, 50);
     const playerStart = { x: currentX + 20, y: startPlatformY - PLAYER_HEIGHT - 10 };
 
     // Start platform
@@ -101,58 +103,56 @@ export default function PixelJumperGame() {
     platforms.push(startPlatform);
     currentX += startPlatform.width;
 
-    const numPlatforms = 10 + levelIdx * 2 + getRandomInt(0,3); // More platforms for higher levels
+    const numPlatforms = 10 + levelIdx * 2 + getRandomInt(2,5); // Ensure a good number of platforms for length
     let lastPlatform = startPlatform;
+    const minLevelWidth = VIEWPORT_WIDTH * (1.5 + levelIdx * 0.2); // Ensure levels get longer
 
-    for (let i = 0; i < numPlatforms; i++) {
-      const gapX = getRandomInt(50, 120); // Gap between platforms
+    for (let i = 0; i < numPlatforms || currentX < minLevelWidth; i++) {
+      const gapX = getRandomInt(60, 130); 
       currentX += gapX;
       
-      let newY = lastPlatform.y + getRandomInt(-80, 80); // Vary Y position
-      newY = Math.max(100, Math.min(CANVAS_HEIGHT - 70, newY)); // Keep within reasonable bounds
+      let newY = lastPlatform.y + getRandomInt(-90, 90); 
+      newY = Math.max(150, Math.min(VIEWPORT_HEIGHT - 80, newY)); 
 
-      const newWidth = getRandomInt(80, 200);
+      const newWidth = getRandomInt(100, 250);
       const platform: Platform = { x: currentX, y: newY, width: newWidth, height: 20, color: `hsl(${colorValues.muted})` };
       platforms.push(platform);
 
-      // Add food items
-      if (Math.random() < 0.6) { // 60% chance to add food
+      if (Math.random() < 0.65) { 
         foodItems.push({ 
             x: platform.x + platform.width / 2 - 7.5, 
-            y: platform.y - 20, 
+            y: platform.y - 25, 
             width: 15, height: 15, 
             collected: false, 
             color: `hsl(${colorValues.accent})` 
         });
       }
 
-      // Add enemies (more frequent on higher levels)
-      if (Math.random() < (0.2 + levelIdx * 0.05) && platform.width > ENEMY_WIDTH + 20) {
+      if (i > 0 && Math.random() < (0.25 + levelIdx * 0.06) && platform.width > ENEMY_WIDTH + 30) {
          enemies.push({
-            x: platform.x + 10,
+            x: platform.x + 15,
             y: platform.y - ENEMY_HEIGHT,
             width: ENEMY_WIDTH,
             height: ENEMY_HEIGHT,
             vx: ENEMY_SPEED * (Math.random() > 0.5 ? 1 : -1),
-            originalX: platform.x + 10,
-            patrolRange: Math.min(ENEMY_PATROL_RANGE, platform.width - ENEMY_WIDTH - 20),
+            originalX: platform.x + 15,
+            patrolRange: Math.min(ENEMY_PATROL_RANGE + levelIdx * 5, platform.width - ENEMY_WIDTH - 30),
             color: `hsl(${colorValues.enemyColor})`,
          });
       }
 
-       // Add traps (more frequent on higher levels)
-      if (i > 0 && Math.random() < (0.15 + levelIdx * 0.04)) { // Don't put trap on very first gap
-        if (gapX > TRAP_SIZE + 20) { // Ensure gap is wide enough for a trap + jump space
+      if (i > 1 && Math.random() < (0.20 + levelIdx * 0.05)) { 
+        if (gapX > TRAP_SIZE + 30 && lastPlatform.y > VIEWPORT_HEIGHT - 100) { 
             traps.push({
                 x: lastPlatform.x + lastPlatform.width + (gapX / 2) - (TRAP_SIZE / 2),
-                y: CANVAS_HEIGHT - TRAP_SIZE - 20, // Ground traps for now
+                y: VIEWPORT_HEIGHT - TRAP_SIZE - 10, 
                 width: TRAP_SIZE,
                 height: TRAP_SIZE,
                 color: `hsl(${colorValues.trapColor})`,
             });
-        } else if (platform.width > TRAP_SIZE + 20) { // Or put on a platform
+        } else if (platform.width > TRAP_SIZE + 40 && platform.y > VIEWPORT_HEIGHT - 100 && Math.random() < 0.5) { 
              traps.push({
-                x: platform.x + getRandomInt(10, platform.width - TRAP_SIZE - 10),
+                x: platform.x + getRandomInt(15, platform.width - TRAP_SIZE - 15),
                 y: platform.y - TRAP_SIZE, 
                 width: TRAP_SIZE,
                 height: TRAP_SIZE,
@@ -160,21 +160,22 @@ export default function PixelJumperGame() {
             });
         }
       }
-
       lastPlatform = platform;
       currentX += platform.width;
     }
     
-    // Ensure goal is far enough
+    const calculatedLevelWidth = Math.max(currentX + 100, minLevelWidth + 200); // Ensure goal is past last platform + padding
     const goalPlatform = platforms[platforms.length -1];
-    const goal: Goal = { x: Math.max(CANVAS_WIDTH - 100, goalPlatform.x + goalPlatform.width/2 -15), y: goalPlatform.y - 40, width: 30, height: 30, color: `hsl(${colorValues.primary})`};
-    if (goal.x + goal.width > CANVAS_WIDTH) { // Ensure goal is within canvas
-        goal.x = CANVAS_WIDTH - goal.width - 10;
-    }
+    const goalX = Math.max(goalPlatform.x + goalPlatform.width + 50, calculatedLevelWidth - 150);
+    const goal: Goal = { 
+        x: goalX, 
+        y: goalPlatform.y - 40, 
+        width: 30, height: 30, color: `hsl(${colorValues.primary})`
+    };
     if (goal.y < 0) goal.y = 20;
 
 
-    return { playerStart, platforms, foodItems, enemies, traps, goal };
+    return { playerStart, platforms, foodItems, enemies, traps, goal, calculatedLevelWidth };
   }, [colorValues]);
 
 
@@ -183,7 +184,7 @@ export default function PixelJumperGame() {
         setGameState('all_levels_complete');
         return;
     }
-    const { playerStart, platforms, foodItems, enemies, traps, goal } = generateProceduralLevelContent(levelIndex);
+    const { playerStart, platforms, foodItems, enemies, traps, goal, calculatedLevelWidth } = generateProceduralLevelContent(levelIndex);
     
     setPlayer({
       x: playerStart.x,
@@ -203,6 +204,8 @@ export default function PixelJumperGame() {
     setCurrentLevelIndex(levelIndex);
     setScore(0);
     setLevelHighScore(getPixelJumperLevelHighScore(staticPixelJumperLevelsConfig[levelIndex].id));
+    setLevelContentWidth(calculatedLevelWidth);
+    setCameraOffsetX(0); // Reset camera
     setGameState('playing');
     keysPressed.current = {};
   }, [colorValues, generateProceduralLevelContent]);
@@ -266,9 +269,15 @@ export default function PixelJumperGame() {
         vy += GRAVITY;
         y += vy;
 
+        // Clamp player X position to level bounds
         if (x < 0) x = 0;
-        if (x + width > CANVAS_WIDTH) x = CANVAS_WIDTH - width;
-        if (y + height > CANVAS_HEIGHT) {
+        if (x + width > levelContentWidth) x = levelContentWidth - width;
+        
+        if (y < 0) { // Hit ceiling
+            y = 0;
+            vy = 0;
+        }
+        if (y + height > VIEWPORT_HEIGHT) { // Fell off bottom
             setGameState('game_over_fall');
             return prevPlayer;
         }
@@ -280,26 +289,25 @@ export default function PixelJumperGame() {
             x + width > platform.x &&
             y < platform.y + platform.height &&
             y + height > platform.y
-          ) { // Basic AABB collision
-            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) { // Landing on top
+          ) { 
+            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) { 
               y = platform.y - height;
               vy = 0;
               isJumping = false;
               onPlatform = true;
-            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) { // Hitting bottom
+            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) { 
                 y = platform.y + platform.height;
                 vy = 0;
-            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x) { // Hitting left side
+            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x && y + height > platform.y && y < platform.y + platform.height) { 
                 x = platform.x - width;
                 vx = 0;
-            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width) { // Hitting right side
+            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width && y + height > platform.y && y < platform.y + platform.height) { 
                 x = platform.x + platform.width;
                 vx = 0;
             }
           }
         });
         
-        // Collect Food Items
         setCurrentFoodItems(prevFoodItems =>
           prevFoodItems.map(food => {
             if (
@@ -316,7 +324,6 @@ export default function PixelJumperGame() {
           })
         );
 
-        // Check Enemy Collisions
         for (const enemy of currentEnemies) {
             if (
                 x < enemy.x + enemy.width &&
@@ -325,11 +332,10 @@ export default function PixelJumperGame() {
                 y + height > enemy.y
             ) {
                 setGameState('game_over_enemy');
-                return prevPlayer; // Stop player update on collision
+                return prevPlayer; 
             }
         }
 
-        // Check Trap Collisions
         for (const trap of currentTraps) {
             if (
                 x < trap.x + trap.width &&
@@ -338,11 +344,10 @@ export default function PixelJumperGame() {
                 y + height > trap.y
             ) {
                 setGameState('game_over_trap');
-                return prevPlayer; // Stop player update on collision
+                return prevPlayer; 
             }
         }
         
-        // Check Goal
         if (currentGoal &&
             x < currentGoal.x + currentGoal.width &&
             x + width > currentGoal.x &&
@@ -354,7 +359,7 @@ export default function PixelJumperGame() {
             if (score > levelHighScore) setLevelHighScore(score);
             
             const nextLevel = currentLevelIndex + 1;
-            savePixelJumperMaxUnlockedLevel(nextLevel +1); // Save as 1-based index for unlock
+            savePixelJumperMaxUnlockedLevel(nextLevel +1); 
             setMaxUnlockedLevel(getPixelJumperMaxUnlockedLevel());
 
             setGameState('level_complete');
@@ -370,36 +375,44 @@ export default function PixelJumperGame() {
             let newX = enemy.x + enemy.vx;
             let newVx = enemy.vx;
 
-            if (newX <= enemy.originalX - enemy.patrolRange || newX + enemy.width >= enemy.originalX + enemy.patrolRange + enemy.width) {
-                newVx = -enemy.vx; // Reverse direction
-                newX = enemy.x + newVx; // Correct position after reversing
-            }
-            
-            // Basic platform check for enemies to prevent falling (optional, simple version)
-            let onPlatform = false;
-            for (const platform of currentPlatforms) {
-                if (
-                    newX < platform.x + platform.width &&
-                    newX + enemy.width > platform.x &&
-                    enemy.y + enemy.height === platform.y // Assumes enemy is exactly on top
-                ) {
-                    onPlatform = true;
+            // Check platform boundaries for patrol for more robust enemy movement
+            let enemyOnValidPlatform = false;
+            let currentPlatformWidth = 0;
+            let currentPlatformX = 0;
+
+            for (const p of currentPlatforms) {
+                if (enemy.y + enemy.height === p.y && enemy.x + enemy.width > p.x && enemy.x < p.x + p.width) {
+                    enemyOnValidPlatform = true;
+                    currentPlatformX = p.x;
+                    currentPlatformWidth = p.width;
                     break;
                 }
             }
-            if (!onPlatform && enemy.vx !== 0) { // If patrolling and no platform ahead, turn around (very basic)
-                // This logic is too simple and might get enemies stuck. True platform detection for enemies is complex.
-                // For now, they just patrol within their originalX +- patrolRange without falling.
-            }
+            
+            // Adjust patrol based on platform if found, otherwise use original patrol logic
+            const minPatrolX = enemyOnValidPlatform ? currentPlatformX : enemy.originalX - enemy.patrolRange;
+            const maxPatrolX = enemyOnValidPlatform ? currentPlatformX + currentPlatformWidth - enemy.width : enemy.originalX + enemy.patrolRange;
 
+            if (newX <= minPatrolX || newX >= maxPatrolX) {
+                newVx = -enemy.vx; 
+                newX = enemy.x + newVx; 
+            }
+            
             return {...enemy, x: newX, vx: newVx};
         })
       );
 
+      // Update Camera
+      if (player) {
+        const targetCameraX = player.x - VIEWPORT_WIDTH / 2.8; // Keep player slightly left of center
+        const clampedCameraX = Math.max(0, Math.min(targetCameraX, levelContentWidth - VIEWPORT_WIDTH));
+        setCameraOffsetX(clampedCameraX);
+      }
+
     }, 1000 / 60); 
 
     return () => clearInterval(gameLoop);
-  }, [gameState, player, currentPlatforms, currentGoal, score, levelHighScore, currentLevelIndex, loadLevel, currentEnemies, currentTraps]);
+  }, [gameState, player, currentPlatforms, currentGoal, score, levelHighScore, currentLevelIndex, loadLevel, currentEnemies, currentTraps, levelContentWidth]);
 
 
   useEffect(() => { 
@@ -408,12 +421,17 @@ export default function PixelJumperGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Clear viewport with background color
     ctx.fillStyle = `hsl(${colorValues.background})`;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
     const activeGameRenderStates: GameState[] = ['playing', 'level_complete', 'game_over_fall', 'game_over_enemy', 'game_over_trap', 'all_levels_complete'];
 
     if (activeGameRenderStates.includes(gameState)) {
+        ctx.save();
+        ctx.translate(-cameraOffsetX, 0); // Apply camera offset
+
+        // Draw World Elements (affected by camera)
         currentPlatforms.forEach(platform => {
             ctx.fillStyle = platform.color || `hsl(${colorValues.muted})`;
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
@@ -433,7 +451,6 @@ export default function PixelJumperGame() {
 
         currentTraps.forEach(trap => {
             ctx.fillStyle = trap.color || `hsl(${colorValues.trapColor})`;
-            // Draw simple trap (e.g., triangle or jagged rect)
             ctx.beginPath();
             ctx.moveTo(trap.x, trap.y + trap.height);
             ctx.lineTo(trap.x + trap.width / 2, trap.y);
@@ -452,56 +469,60 @@ export default function PixelJumperGame() {
             ctx.fillRect(player.x, player.y, player.width, player.height);
         }
         
+        ctx.restore(); // Restore context before drawing HUD
+
+        // Draw HUD Elements (fixed on viewport)
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.font = '18px "Space Grotesk", sans-serif';
         ctx.textAlign = 'left';
-        const currentLevelConfig = staticPixelJumperLevelsConfig[currentLevelIndex];
-        ctx.fillText(`Level: ${currentLevelConfig?.name || `Generated ${currentLevelIndex + 1}`}`, 10, 25);
+        const currentLevelConfigData = staticPixelJumperLevelsConfig[currentLevelIndex];
+        ctx.fillText(`Level: ${currentLevelConfigData?.name || `Generated ${currentLevelIndex + 1}`}`, 10, 25);
         ctx.fillText(`Score: ${score}`, 10, 50);
         ctx.textAlign = 'right';
-        ctx.fillText(`High Score: ${levelHighScore}`, CANVAS_WIDTH - 10, 25);
+        ctx.fillText(`High Score: ${levelHighScore}`, VIEWPORT_WIDTH - 10, 25);
     }
     
+    // Draw Overlays (game_complete, game_over etc.) - these cover the viewport
     if (gameState === 'level_complete') {
-        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`; // Use primary for success
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`; 
+        ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
         ctx.font = 'bold 36px "Space Grotesk", sans-serif';
-        ctx.fillText('Level Complete!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+        ctx.fillText('Level Complete!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 20);
         ctx.font = '20px "Space Grotesk", sans-serif';
-        ctx.fillText(`Your Score: ${score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+        ctx.fillText(`Your Score: ${score}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 20);
     }
 
     if (gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') {
         ctx.fillStyle = `hsla(${colorValues.destructive}, 0.8)`;
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
         ctx.font = 'bold 36px "Space Grotesk", sans-serif';
-        ctx.fillText('Game Over!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 40);
+        ctx.fillText('Game Over!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 40);
         ctx.font = '20px "Space Grotesk", sans-serif';
         if (gameState === 'game_over_fall') {
-            ctx.fillText('You fell off the screen.', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            ctx.fillText('You fell off the screen.', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
         } else if (gameState === 'game_over_enemy') {
-            ctx.fillText('Hit by an enemy!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            ctx.fillText('Hit by an enemy!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
         } else if (gameState === 'game_over_trap') {
-            ctx.fillText('Stepped on a trap!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            ctx.fillText('Stepped on a trap!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
         }
-         ctx.fillText(`Final Score: ${score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30);
+         ctx.fillText(`Final Score: ${score}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 30);
     }
      if (gameState === 'all_levels_complete') {
-        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`; // Use primary for grand success
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`; 
+        ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
         ctx.font = 'bold 36px "Space Grotesk", sans-serif';
-        ctx.fillText('Congratulations!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+        ctx.fillText('Congratulations!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 20);
         ctx.font = '20px "Space Grotesk", sans-serif';
-        ctx.fillText('You have completed all available levels!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+        ctx.fillText('You have completed all available levels!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 20);
     }
 
-  }, [gameState, player, currentPlatforms, currentFoodItems, currentEnemies, currentTraps, currentGoal, score, levelHighScore, currentLevelIndex, colorValues]);
+  }, [gameState, player, currentPlatforms, currentFoodItems, currentEnemies, currentTraps, currentGoal, score, levelHighScore, currentLevelIndex, colorValues, cameraOffsetX, levelContentWidth]);
 
   const handleStartGame = () => {
     loadLevel(0);
@@ -524,7 +545,7 @@ export default function PixelJumperGame() {
     }
   };
 
-  const currentLevelConfig = staticPixelJumperLevelsConfig[currentLevelIndex];
+  const currentLevelConfigData = staticPixelJumperLevelsConfig[currentLevelIndex];
 
   if (gameState === 'menu') {
     return (
@@ -584,18 +605,18 @@ export default function PixelJumperGame() {
 
   return (
     <div className="flex flex-col items-center gap-6 p-4 md:p-8">
-      <Card className="w-full max-w-[1400px] bg-card/90 shadow-xl overflow-x-auto">
+      <Card className="w-full max-w-[800px] bg-card/90 shadow-xl overflow-hidden"> {/* Max width to viewport width */}
         <CardHeader className="text-center pb-2">
             <CardTitle className="text-3xl font-headline text-primary">
-              Pixel Jumper - {currentLevelConfig?.name || `Generated ${currentLevelIndex + 1}`}
+              Pixel Jumper - {currentLevelConfigData?.name || `Generated ${currentLevelIndex + 1}`}
             </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
             <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background">
                 <canvas
                 ref={canvasRef}
-                width={CANVAS_WIDTH}
-                height={CANVAS_HEIGHT}
+                width={VIEWPORT_WIDTH} // Use viewport width for canvas element
+                height={VIEWPORT_HEIGHT} // Use viewport height for canvas element
                 aria-label="Pixel Jumper game board"
                 role="img"
                 tabIndex={0} 
@@ -643,3 +664,5 @@ export default function PixelJumperGame() {
     </div>
   );
 }
+
+    
