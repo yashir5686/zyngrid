@@ -470,23 +470,29 @@ export default function PixelJumperGame() {
     }
 
 
-    // Game Over / Level Complete messages
+    // Game Over messages
     if (gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') {
         ctx.fillStyle = `hsla(${colorValues.destructive}, 0.8)`;
         ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT); // Overlay
+        
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
+        
         ctx.font = 'bold 36px "Space Grotesk", sans-serif';
-        ctx.fillText('Game Over!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 40);
+        ctx.fillText('Game Over!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 60);
+        
         ctx.font = '20px "Space Grotesk", sans-serif';
+        let causeMessage = 'An unknown error occurred.';
         if (gameState === 'game_over_fall') {
-            ctx.fillText('You fell!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
+            causeMessage = 'You fell!';
         } else if (gameState === 'game_over_enemy') {
-            ctx.fillText('Hit by an enemy!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
+            causeMessage = 'Hit by an enemy!';
         } else if (gameState === 'game_over_trap') {
-            ctx.fillText('Stepped on a trap!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
+            causeMessage = 'Stepped on a trap!';
         }
-         ctx.fillText(`Final Score: ${score}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 30);
+        ctx.fillText(causeMessage, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 20);
+        ctx.fillText(`Final Score: ${score}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 20);
+        ctx.fillText(`High Score: ${highScore}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 50);
     }
 
   }, [gameState, player, platforms, foodItems, enemies, traps, score, highScore, colorValues, cameraOffsetX, lastGeneratedX]);
