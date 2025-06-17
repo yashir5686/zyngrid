@@ -8,6 +8,7 @@ import { ArrowLeft, Construction } from 'lucide-react';
 import Image from 'next/image';
 import DynamicSnakeLoader from '@/components/dynamic-snake-loader';
 import DynamicPixelJumperLoader from '@/components/dynamic-pixel-jumper-loader';
+import DynamicStarShooterLoader from '@/components/dynamic-star-shooter-loader';
 
 export async function generateStaticParams() {
   return games.map((game) => ({
@@ -33,6 +34,10 @@ export default function GamePage({ params }: GamePageProps) {
 
   if (game.id === 'pixel-jumper') {
     return <DynamicPixelJumperLoader />;
+  }
+
+  if (game.id === 'star-shooter') {
+    return <DynamicStarShooterLoader />;
   }
 
   // Placeholder for other games

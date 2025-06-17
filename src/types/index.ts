@@ -37,3 +37,33 @@ export interface Enemy extends PixelJumperEntity {
 }
 
 export interface Trap extends PixelJumperEntity {}
+
+// Types for Star Shooter Game
+export interface StarShooterEntity {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color?: string;
+}
+
+export interface StarShooterPlayer extends StarShooterEntity {
+  speed: number;
+}
+
+export interface Bullet extends StarShooterEntity {
+  speed: number;
+}
+
+export interface EnemyShip extends StarShooterEntity {
+  speed: number;
+  health?: number; // Optional: for more complex enemies
+}
+
+export interface Star {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  color?: string;
+}
