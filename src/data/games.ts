@@ -1,3 +1,4 @@
+
 import type { Game } from '@/types';
 
 export const games: Game[] = [
@@ -13,9 +14,10 @@ export const games: Game[] = [
   {
     id: 'pixel-jumper',
     name: 'Pixel Jumper',
-    thumbnail: 'https://placehold.co/300x200.png',
+    thumbnail: 'https://placehold.co/300x200.png', // You might want a new placeholder
     slug: 'pixel-jumper',
-    description: 'Jump across platforms and avoid obstacles in this pixelated adventure.',
+    description: 'Jump across platforms, collect items, and reach the goal in this pixelated adventure.',
+    bannerImage: 'https://placehold.co/1200x400.png', // Optional: new banner
     dataAiHint: 'pixel platformer',
   },
   {
@@ -29,4 +31,5 @@ export const games: Game[] = [
 ];
 
 // Ensure featuredGame correctly finds 'snake' or falls back.
+// You might want to change the featured game or update its logic.
 export const featuredGame: Game = games.find(game => game.id === 'snake') || games[0];

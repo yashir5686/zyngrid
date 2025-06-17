@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Construction } from 'lucide-react';
 import Image from 'next/image';
 import DynamicSnakeLoader from '@/components/dynamic-snake-loader';
+import DynamicPixelJumperLoader from '@/components/dynamic-pixel-jumper-loader';
 
 export async function generateStaticParams() {
   return games.map((game) => ({
@@ -28,6 +29,10 @@ export default function GamePage({ params }: GamePageProps) {
 
   if (game.id === 'snake') {
     return <DynamicSnakeLoader />;
+  }
+
+  if (game.id === 'pixel-jumper') {
+    return <DynamicPixelJumperLoader />;
   }
 
   // Placeholder for other games
