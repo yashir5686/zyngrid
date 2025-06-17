@@ -17,7 +17,7 @@ const PLAYER_HEIGHT = 30;
 const PLAYER_SPEED = 7;
 const BULLET_WIDTH = 5;
 const BULLET_HEIGHT = 15;
-const BULLET_SPEED = 10;
+const BULLET_SPEED = 7; // Slowed down from 10
 const ENEMY_WIDTH = 35;
 const ENEMY_HEIGHT = 30;
 const ENEMY_BASE_SPEED = 1.5; 
@@ -31,8 +31,8 @@ type GameState = 'menu' | 'playing' | 'game_over';
 export default function StarShooterGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameState, setGameState] = useState<GameState>('menu');
-  const [player, setPlayer] = useState<StarShooterPlayer | null>(null); // For React rendering
-  const playerRef = useRef<StarShooterPlayer | null>(null); // For game loop logic
+  const [player, setPlayer] = useState<StarShooterPlayer | null>(null); 
+  const playerRef = useRef<StarShooterPlayer | null>(null); 
 
   const [bullets, setBullets] = useState<Bullet[]>([]);
   const [enemies, setEnemies] = useState<EnemyShip[]>([]);
@@ -41,7 +41,7 @@ export default function StarShooterGame() {
   const [highScore, setHighScoreState] = useState(0);
   
   const lastEnemySpawnTime = useRef(0);
-  const lastPlayerShotTime = useRef(Date.now()); // Initialize to avoid immediate shot
+  const lastPlayerShotTime = useRef(Date.now()); 
   const isMobile = useIsMobile();
 
   const [actualCanvasSize, setActualCanvasSize] = useState({ width: LOGIC_CANVAS_WIDTH, height: LOGIC_CANVAS_HEIGHT });
@@ -118,6 +118,7 @@ export default function StarShooterGame() {
 
   const startGame = useCallback(() => {
     const initialPlayer: StarShooterPlayer = {
+      id: 'player',
       x: LOGIC_CANVAS_WIDTH / 2 - PLAYER_WIDTH / 2,
       y: LOGIC_CANVAS_HEIGHT - PLAYER_HEIGHT - 20,
       width: PLAYER_WIDTH,
@@ -182,8 +183,6 @@ export default function StarShooterGame() {
       return;
     }
     
-    // Sync playerRef with player state if it exists (e.g., after startGame)
-    // This ensures playerRef is up-to-date if the effect re-runs.
     if (player && playerRef.current !== player) {
         playerRef.current = player;
     }
@@ -192,7 +191,6 @@ export default function StarShooterGame() {
       const currentTime = Date.now();
       const currentPlayerLogic = playerRef.current;
 
-      // Player Movement
       if (currentPlayerLogic) {
         let newX = currentPlayerLogic.x;
         if (keysPressed.current['arrowleft'] || keysPressed.current['a'] || keysPressed.current['mobile_left']) {
@@ -209,12 +207,12 @@ export default function StarShooterGame() {
         }
       }
       
-      // Automatic Player Shooting
       if (playerRef.current && (currentTime - lastPlayerShotTime.current > PLAYER_SHOOT_INTERVAL)) {
         const p = playerRef.current;
         setBullets(prevBullets => [
           ...prevBullets,
           {
+            id: `bullet_${performance.now()}_${Math.random().toString(36).substring(2, 9)}`,
             x: p.x + p.width / 2 - BULLET_WIDTH / 2,
             y: p.y,
             width: BULLET_WIDTH,
@@ -226,87 +224,92 @@ export default function StarShooterGame() {
         lastPlayerShotTime.current = currentTime;
       }
 
-      // Update bullets, enemies, and handle collisions
-      setBullets(prevAllBullets => {
-        let stillExistingBullets = prevAllBullets
-          .map(b => ({ ...b, y: b.y - b.speed })) 
-          .filter(b => b.y + b.height > 0); 
-
-        setEnemies(prevAllEnemies => {
-          let scoreGainedThisTick = 0;
-          let playerHitThisTick = false;
-
-          const enemiesAfterCollisions = prevAllEnemies.reduce((acc: EnemyShip[], enemy) => {
-            let currentEnemy = { ...enemy, y: enemy.y + enemy.speed }; 
-            let enemyWasHitByBullet = false;
-
-            const bulletsThatDidNotHitThisEnemy: Bullet[] = [];
-            for (const bullet of stillExistingBullets) {
-              if (
-                bullet.x < currentEnemy.x + currentEnemy.width &&
-                bullet.x + bullet.width > currentEnemy.x &&
-                bullet.y < currentEnemy.y + currentEnemy.height &&
-                bullet.y + bullet.height > currentEnemy.y
-              ) {
-                enemyWasHitByBullet = true;
-                scoreGainedThisTick += 10;
-              } else {
-                bulletsThatDidNotHitThisEnemy.push(bullet);
-              }
-            }
-            stillExistingBullets = bulletsThatDidNotHitThisEnemy; 
-
-            if (enemyWasHitByBullet) {
-              return acc; 
-            }
-            
-            const pLogic = playerRef.current;
-            if (pLogic &&
-              pLogic.x < currentEnemy.x + currentEnemy.width &&
-              pLogic.x + pLogic.width > currentEnemy.x &&
-              pLogic.y < currentEnemy.y + currentEnemy.height &&
-              pLogic.y + pLogic.height > currentEnemy.y 
-            ) {
-              playerHitThisTick = true;
-            }
-
-            if (currentEnemy.y < LOGIC_CANVAS_HEIGHT) {
-              acc.push(currentEnemy); 
-            }
-            return acc;
-          }, [] as EnemyShip[]);
-
-          if (scoreGainedThisTick > 0) {
-            setScore(s => s + scoreGainedThisTick);
-          }
-
-          if (playerHitThisTick && gameState === 'playing') { // gameState check to prevent multiple triggers
-            setScore(currentScoreVal => {
-                setHighScoreState(currentHighScoreVal => {
-                    if (currentScoreVal > currentHighScoreVal) {
-                        saveHighScore('starshooter_highscore', currentScoreVal);
-                        return currentScoreVal;
-                    }
-                    return currentHighScoreVal;
-                });
-                return currentScoreVal;
-            });
-            setGameState('game_over');
-          }
-          return enemiesAfterCollisions;
-        });
-        return stillExistingBullets; 
-      });
+      let currentBullets = bullets;
+      let currentEnemies = enemies;
+      let currentScore = score;
+      let playerIsHit = false;
+      let scoreToAddThisTick = 0;
       
-      // Spawn new enemies
+      const movedBullets = currentBullets
+        .map(b => ({ ...b, y: b.y - b.speed }))
+        .filter(b => b.y + b.height > 0);
+      
+      const movedEnemies = currentEnemies
+        .map(e => ({ ...e, y: e.y + e.speed }));
+
+      const survivingBullets: Bullet[] = [];
+      const survivingEnemies: EnemyShip[] = [];
+      
+      const hitEnemyIds = new Set<string>();
+
+      for (const bullet of movedBullets) {
+          let bulletHitEnemy = false;
+          for (const enemy of movedEnemies) {
+              if (hitEnemyIds.has(enemy.id!)) continue; 
+
+              if (
+                  bullet.x < enemy.x + enemy.width &&
+                  bullet.x + bullet.width > enemy.x &&
+                  bullet.y < enemy.y + enemy.height &&
+                  bullet.y + bullet.height > enemy.y
+              ) {
+                  scoreToAddThisTick += 10;
+                  hitEnemyIds.add(enemy.id!);
+                  bulletHitEnemy = true; 
+                  break; 
+              }
+          }
+          if (!bulletHitEnemy) {
+              survivingBullets.push(bullet);
+          }
+      }
+      
+      const pLogic = playerRef.current;
+      for (const enemy of movedEnemies) {
+          if (hitEnemyIds.has(enemy.id!)) continue; 
+
+          if (enemy.y < LOGIC_CANVAS_HEIGHT) { // Only consider enemies on screen
+            survivingEnemies.push(enemy); // Add to survivors if not hit
+            if (pLogic && !playerIsHit && // Check player collision only if player not already hit this tick
+                pLogic.x < enemy.x + enemy.width &&
+                pLogic.x + pLogic.width > enemy.x &&
+                pLogic.y < enemy.y + enemy.height &&
+                pLogic.y + pLogic.height > enemy.y
+            ) {
+                playerIsHit = true;
+            }
+          }
+      }
+      
+      setBullets(survivingBullets);
+      setEnemies(survivingEnemies.filter(e => !hitEnemyIds.has(e.id!))); // Filter out hit enemies from survivors
+
+      if (scoreToAddThisTick > 0) {
+          setScore(s => s + scoreToAddThisTick);
+      }
+
+      if (playerIsHit && gameState === 'playing') {
+          setScore(currentScoreVal => { // Use functional update to get latest score for comparison
+              setHighScoreState(currentHighScoreVal => {
+                  if (currentScoreVal > currentHighScoreVal) {
+                      saveHighScore('starshooter_highscore', currentScoreVal);
+                      return currentScoreVal;
+                  }
+                  return currentHighScoreVal;
+              });
+              return currentScoreVal;
+          });
+          setGameState('game_over');
+      }
+      
       if (currentTime - lastEnemySpawnTime.current > ENEMY_SPAWN_INTERVAL) {
         setEnemies(prevEnemies => {
           if (prevEnemies.length < MAX_ENEMIES) {
-            // Read score directly from state for difficulty factor, functional update for score ensures it is up-to-date
-            const difficultyFactor = 1 + Math.min(score / 500, 2.5); 
+            const difficultyFactor = 1 + Math.min(score / 500, 2.5); // Read latest score
             return [
               ...prevEnemies,
               {
+                id: `enemy_${performance.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 x: Math.random() * (LOGIC_CANVAS_WIDTH - ENEMY_WIDTH),
                 y: -ENEMY_HEIGHT,
                 width: ENEMY_WIDTH,
@@ -321,7 +324,6 @@ export default function StarShooterGame() {
         lastEnemySpawnTime.current = currentTime;
       }
       
-      // Update stars
       setStars(prevStars => prevStars.map(star => {
           let newY = star.y + star.speed;
           if (newY > LOGIC_CANVAS_HEIGHT) {
@@ -334,7 +336,7 @@ export default function StarShooterGame() {
     }, 1000 / 60); 
 
     return () => clearInterval(gameLoop);
-  }, [gameState, colorValues, initStars, score, saveHighScore]); // Added score and saveHighScore as they are read in the loop
+  }, [gameState, colorValues, initStars, bullets, enemies, score]); 
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -360,7 +362,7 @@ export default function StarShooterGame() {
     });
     
     if (gameState !== 'menu') {
-      const playerToDraw = playerRef.current || player; // Prefer ref for current position if available
+      const playerToDraw = playerRef.current || player; 
       if (playerToDraw) {
         ctx.fillStyle = playerToDraw.color || `hsl(${colorValues.primary})`;
         ctx.beginPath();
@@ -510,3 +512,4 @@ export default function StarShooterGame() {
     </div>
   );
 }
+

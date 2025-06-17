@@ -40,6 +40,7 @@ export interface Trap extends PixelJumperEntity {}
 
 // Types for Star Shooter Game
 export interface StarShooterEntity {
+  id?: string; // Optional unique ID for entities
   x: number;
   y: number;
   width: number;
@@ -67,3 +68,4 @@ export interface Star {
   speed: number;
   color?: string;
 }
+
