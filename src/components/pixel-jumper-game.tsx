@@ -6,10 +6,13 @@ import { getHighScore, saveHighScore } from '@/lib/local-storage';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home, Play, RotateCcw, Gamepad2 } from 'lucide-react';
+import { Home, Play, RotateCcw, Gamepad2, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const VIEWPORT_WIDTH = 800;
-const VIEWPORT_HEIGHT = 450;
+// Logical game dimensions - game logic operates in this coordinate space
+const GAME_LOGIC_WIDTH = 800;
+const GAME_LOGIC_HEIGHT = 450;
+
 const PLAYER_WIDTH = 20;
 const PLAYER_HEIGHT = 30;
 const GRAVITY = 0.6;
@@ -22,10 +25,10 @@ const ENEMY_HEIGHT = 25;
 const TRAP_SIZE = 20;
 
 const INITIAL_PLAYER_X = 50;
-const INITIAL_PLAYER_Y = VIEWPORT_HEIGHT - 100;
+const INITIAL_PLAYER_Y = GAME_LOGIC_HEIGHT - 100;
 
-const WORLD_CHUNK_WIDTH = VIEWPORT_WIDTH * 2; // How much to generate at a time
-const WORLD_GENERATION_THRESHOLD_FACTOR = 1.5; // When player is 1.5 viewport widths from end, generate more
+const WORLD_CHUNK_WIDTH = GAME_LOGIC_WIDTH * 1.5; // Generate a bit more than one screen width
+const WORLD_GENERATION_THRESHOLD_FACTOR = 1.2; // When player is this many viewport widths from end, generate more
 
 type GameState = 'menu' | 'playing' | 'game_over_fall' | 'game_over_enemy' | 'game_over_trap';
 
@@ -43,6 +46,11 @@ export default function PixelJumperGame() {
   const [highScore, setHighScoreState] = useState(0);
   const [cameraOffsetX, setCameraOffsetX] = useState(0);
   const [lastGeneratedX, setLastGeneratedX] = useState(0);
+  const isMobile = useIsMobile();
+
+  const [actualCanvasSize, setActualCanvasSize] = useState({ width: GAME_LOGIC_WIDTH, height: GAME_LOGIC_HEIGHT });
+  const [scaleFactor, setScaleFactor] = useState({ x: 1, y: 1 });
+
 
   const [colorValues, setColorValues] = useState({
     background: '220 11% 15%',
@@ -75,6 +83,27 @@ export default function PixelJumperGame() {
     setHighScoreState(getHighScore('pixeljumper_endless'));
   }, []);
 
+  const updateActualCanvasDimensions = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth;
+      // Subtract padding: 32px for mobile, more for desktop to center it better if it's not full width
+      const availableWidth = screenWidth - (isMobile ? 32 : Math.max(32, (screenWidth - GAME_LOGIC_WIDTH)/2) );
+
+      const newCanvasWidth = Math.min(GAME_LOGIC_WIDTH, availableWidth);
+      const newCanvasHeight = newCanvasWidth * (GAME_LOGIC_HEIGHT / GAME_LOGIC_WIDTH);
+      
+      setActualCanvasSize({ width: newCanvasWidth, height: newCanvasHeight });
+      setScaleFactor({ x: newCanvasWidth / GAME_LOGIC_WIDTH, y: newCanvasHeight / GAME_LOGIC_HEIGHT });
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    updateActualCanvasDimensions();
+    window.addEventListener('resize', updateActualCanvasDimensions);
+    return () => window.removeEventListener('resize', updateActualCanvasDimensions);
+  }, [updateActualCanvasDimensions]);
+
+
   const extendWorld = useCallback((currentLastX: number, lastSafePlatformY: number) => {
     const newPlatforms: Platform[] = [];
     const newFoodItems: FoodItem[] = [];
@@ -85,30 +114,27 @@ export default function PixelJumperGame() {
     const generationEndX = currentLastX + WORLD_CHUNK_WIDTH;
     let lastPlatformY = lastSafePlatformY;
 
-    // Ensure there's a starting platform if it's the very beginning
     if (currentLastX === 0) {
-        const startPlatform: Platform = { 
-            x: 20, y: INITIAL_PLAYER_Y + PLAYER_HEIGHT + 10, 
-            width: 200, height: 20, color: `hsl(${colorValues.muted})` 
+        const startPlatform: Platform = {
+            x: 20, y: INITIAL_PLAYER_Y + PLAYER_HEIGHT + 10,
+            width: 200, height: 20, color: `hsl(${colorValues.muted})`
         };
         newPlatforms.push(startPlatform);
         currentX = startPlatform.x + startPlatform.width;
         lastPlatformY = startPlatform.y;
     }
 
-
     while (currentX < generationEndX) {
       const gapX = getRandomInt(60, 130);
       currentX += gapX;
 
       let newY = lastPlatformY + getRandomInt(-90, 90);
-      newY = Math.max(150, Math.min(VIEWPORT_HEIGHT - 80, newY)); // Keep platforms within reasonable Y range
+      newY = Math.max(150, Math.min(GAME_LOGIC_HEIGHT - 80, newY));
 
       const newWidth = getRandomInt(100, 250);
       const platform: Platform = { x: currentX, y: newY, width: newWidth, height: 20, color: `hsl(${colorValues.muted})` };
       newPlatforms.push(platform);
 
-      // Add food items
       if (Math.random() < 0.65) {
         newFoodItems.push({
             x: platform.x + platform.width / 2 - 7.5,
@@ -119,36 +145,34 @@ export default function PixelJumperGame() {
         });
       }
 
-      // Add enemies (difficulty can increase based on score or distance)
-      const enemySpawnChance = 0.20 + Math.min(0.3, score / 2000); // Max 50% chance
+      const enemySpawnChance = 0.20 + Math.min(0.3, score / 2000);
       if (Math.random() < enemySpawnChance && platform.width > ENEMY_WIDTH + 30) {
          newEnemies.push({
             x: platform.x + 15,
             y: platform.y - ENEMY_HEIGHT,
             width: ENEMY_WIDTH,
             height: ENEMY_HEIGHT,
-            vx: ENEMY_SPEED * (Math.random() > 0.5 ? 1 : -1) * (1 + Math.min(1, score/1000)), // Speed increases slightly
+            vx: ENEMY_SPEED * (Math.random() > 0.5 ? 1 : -1) * (1 + Math.min(1, score/1000)),
             originalX: platform.x + 15,
             patrolRange: Math.min(ENEMY_PATROL_RANGE + (score / 200), platform.width - ENEMY_WIDTH - 30),
             color: `hsl(${colorValues.enemyColor})`,
          });
       }
-      
-      // Add traps
-      const trapSpawnChance = 0.15 + Math.min(0.25, score / 3000); // Max 40% chance
+
+      const trapSpawnChance = 0.15 + Math.min(0.25, score / 3000);
       if (Math.random() < trapSpawnChance) {
-        if (gapX > TRAP_SIZE + 30 && lastPlatformY > VIEWPORT_HEIGHT - 100 && platform.y > VIEWPORT_HEIGHT - 100) { // Trap in a pit
+        if (gapX > TRAP_SIZE + 30 && lastPlatformY > GAME_LOGIC_HEIGHT - 100 && platform.y > GAME_LOGIC_HEIGHT - 100) {
             newTraps.push({
                 x: currentX - gapX + (gapX / 2) - (TRAP_SIZE / 2),
-                y: VIEWPORT_HEIGHT - TRAP_SIZE - 10, // Place on the "floor" of the gap
+                y: GAME_LOGIC_HEIGHT - TRAP_SIZE - 10,
                 width: TRAP_SIZE,
                 height: TRAP_SIZE,
                 color: `hsl(${colorValues.trapColor})`,
             });
-        } else if (platform.width > TRAP_SIZE + 40 && Math.random() < 0.5) { // Trap on a platform
+        } else if (platform.width > TRAP_SIZE + 40 && Math.random() < 0.5) {
              newTraps.push({
                 x: platform.x + getRandomInt(15, platform.width - TRAP_SIZE - 15),
-                y: platform.y - TRAP_SIZE, // Place on top of the platform
+                y: platform.y - TRAP_SIZE,
                 width: TRAP_SIZE,
                 height: TRAP_SIZE,
                 color: `hsl(${colorValues.trapColor})`,
@@ -158,7 +182,7 @@ export default function PixelJumperGame() {
       lastPlatformY = newY;
       currentX += platform.width;
     }
-    
+
     setPlatforms(prev => [...prev, ...newPlatforms]);
     setFoodItems(prev => [...prev, ...newFoodItems]);
     setEnemies(prev => [...prev, ...newEnemies]);
@@ -187,12 +211,12 @@ export default function PixelJumperGame() {
     setHighScoreState(getHighScore('pixeljumper_endless'));
     setCameraOffsetX(0);
     setLastGeneratedX(0);
-    
-    // Generate initial world segment
+
     extendWorld(0, INITIAL_PLAYER_Y + PLAYER_HEIGHT + 10);
 
     setGameState('playing');
     keysPressed.current = {};
+    canvasRef.current?.focus();
   }, [colorValues, extendWorld]);
 
 
@@ -203,7 +227,7 @@ export default function PixelJumperGame() {
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'a', 'd', 'w', 's'].includes(e.key)) {
           e.preventDefault();
         }
-        keysPressed.current[e.key] = true;
+        keysPressed.current[e.key.toLowerCase()] = true; // Use toLowerCase for keys like 'A', 'D', 'W'
         if ((e.key === ' ' || e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') && player && !player.isJumping) {
           setPlayer(p => p ? { ...p, vy: JUMP_FORCE, isJumping: true } : null);
         }
@@ -219,7 +243,7 @@ export default function PixelJumperGame() {
           e.preventDefault();
         }
       }
-      keysPressed.current[e.key] = false;
+      keysPressed.current[e.key.toLowerCase()] = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -230,180 +254,127 @@ export default function PixelJumperGame() {
     };
   }, [player, gameState]);
 
+  // Mobile control handlers
+  const handleMobileMove = (direction: 'left' | 'right' | 'stop') => {
+    if (gameState !== 'playing') return;
+    keysPressed.current['mobile_left'] = direction === 'left';
+    keysPressed.current['mobile_right'] = direction === 'right';
+  };
+
+  const handleMobileJump = () => {
+    if (gameState !== 'playing' || !player || player.isJumping) return;
+    setPlayer(p => p ? { ...p, vy: JUMP_FORCE, isJumping: true } : null);
+  };
+
   useEffect(() => {
     if (gameState !== 'playing' || !player) return;
 
     const gameLoop = setInterval(() => {
-      // Update Player
       setPlayer(prevPlayer => {
         if (!prevPlayer) return null;
         let { x, y, vx, vy, isJumping, width, height } = prevPlayer;
 
         vx = 0;
-        if (keysPressed.current['ArrowLeft'] || keysPressed.current['a']) {
+        if (keysPressed.current['arrowleft'] || keysPressed.current['a'] || keysPressed.current['mobile_left']) {
           vx = -PLAYER_SPEED;
         }
-        if (keysPressed.current['ArrowRight'] || keysPressed.current['d']) {
+        if (keysPressed.current['arrowright'] || keysPressed.current['d'] || keysPressed.current['mobile_right']) {
           vx = PLAYER_SPEED;
         }
         x += vx;
 
         vy += GRAVITY;
         y += vy;
-        
-        // Prevent player from going too far left (off-screen from start)
-        if (x < cameraOffsetX) x = cameraOffsetX; 
-        // Player cannot go beyond the right edge of viewport for now, camera handles world scroll
-        if (x + width > cameraOffsetX + VIEWPORT_WIDTH) x = cameraOffsetX + VIEWPORT_WIDTH - width;
 
+        if (x < cameraOffsetX) x = cameraOffsetX;
+        if (x + width > cameraOffsetX + GAME_LOGIC_WIDTH) x = cameraOffsetX + GAME_LOGIC_WIDTH - width;
 
-        if (y < 0) { // Hit ceiling
-            y = 0;
-            vy = 0;
-        }
-        if (y + height > VIEWPORT_HEIGHT) { // Fell off bottom
-            if (score > highScore) {
-                saveHighScore('pixeljumper_endless', score);
-                setHighScoreState(score);
-            }
+        if (y < 0) { y = 0; vy = 0; }
+        if (y + height > GAME_LOGIC_HEIGHT) {
+            if (score > highScore) { saveHighScore('pixeljumper_endless', score); setHighScoreState(score); }
             setGameState('game_over_fall');
             return prevPlayer;
         }
 
-        let onPlatform = false;
         platforms.forEach(platform => {
-          if (
-            x < platform.x + platform.width &&
-            x + width > platform.x &&
-            y < platform.y + platform.height &&
-            y + height > platform.y
-          ) { // Collision detected
-            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) { // Landing on top
-              y = platform.y - height;
-              vy = 0;
-              isJumping = false;
-              onPlatform = true;
-            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) { // Hit bottom of platform
-                y = platform.y + platform.height;
-                vy = 0;
-            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x && y + height > platform.y +5 && y < platform.y + platform.height -5) { // Hit left side of platform
-                x = platform.x - width;
-                vx = 0;
-            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width && y + height > platform.y +5 && y < platform.y + platform.height -5) { // Hit right side of platform
-                x = platform.x + platform.width;
-                vx = 0;
+          if ( x < platform.x + platform.width && x + width > platform.x && y < platform.y + platform.height && y + height > platform.y ) {
+            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) {
+              y = platform.y - height; vy = 0; isJumping = false;
+            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) {
+                y = platform.y + platform.height; vy = 0;
+            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x && y + height > platform.y +5 && y < platform.y + platform.height -5) {
+                x = platform.x - width; vx = 0;
+            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width && y + height > platform.y +5 && y < platform.y + platform.height -5) {
+                x = platform.x + platform.width; vx = 0;
             }
           }
         });
 
         setFoodItems(prevFoodItems =>
           prevFoodItems.map(food => {
-            if (
-              !food.collected &&
-              x < food.x + food.width &&
-              x + width > food.x &&
-              y < food.y + food.height &&
-              y + height > food.y
-            ) {
+            if ( !food.collected && x < food.x + food.width && x + width > food.x && y < food.y + food.height && y + height > food.y ) {
               setScore(s => s + 10);
               return { ...food, collected: true };
             }
             return food;
-          })
+          }).filter(food => food.x + food.width > cameraOffsetX) // Prune off-screen food
         );
 
-        for (const enemy of enemies) {
-            if (
-                x < enemy.x + enemy.width &&
-                x + width > enemy.x &&
-                y < enemy.y + enemy.height &&
-                y + height > enemy.y
-            ) {
-                if (score > highScore) {
-                    saveHighScore('pixeljumper_endless', score);
-                    setHighScoreState(score);
-                }
+        enemies.forEach(enemy => {
+            if ( x < enemy.x + enemy.width && x + width > enemy.x && y < enemy.y + enemy.height && y + height > enemy.y ) {
+                if (score > highScore) { saveHighScore('pixeljumper_endless', score); setHighScoreState(score); }
                 setGameState('game_over_enemy');
-                return prevPlayer;
             }
-        }
+        });
 
-        for (const trap of traps) {
-            if (
-                x < trap.x + trap.width &&
-                x + width > trap.x &&
-                y < trap.y + trap.height &&
-                y + height > trap.y
-            ) {
-                if (score > highScore) {
-                    saveHighScore('pixeljumper_endless', score);
-                    setHighScoreState(score);
-                }
+        traps.forEach(trap => {
+            if ( x < trap.x + trap.width && x + width > trap.x && y < trap.y + trap.height && y + height > trap.y ) {
+                if (score > highScore) { saveHighScore('pixeljumper_endless', score); setHighScoreState(score); }
                 setGameState('game_over_trap');
-                return prevPlayer;
             }
-        }
+        });
         return { ...prevPlayer, x, y, vx, vy, isJumping };
       });
 
-      // Update Enemies
       setEnemies(prevEnemies =>
         prevEnemies.map(enemy => {
             let newX = enemy.x + enemy.vx;
             let newVx = enemy.vx;
-
             let enemyOnValidPlatform = false;
-            let currentPlatformX = 0; // The x of the platform the enemy is on
-            let currentPlatformWidth = 0; // The width of that platform
+            let currentPlatformX = 0;
+            let currentPlatformWidth = 0;
 
-            // Check if enemy is on a platform to constrain patrol
             for (const p of platforms) {
-                // Enemy must be aligned with top of platform and within its x bounds
-                if (Math.abs(enemy.y + enemy.height - p.y) < 1 && // on top of platform p
-                    enemy.x + enemy.width > p.x && enemy.x < p.x + p.width) {
-                    enemyOnValidPlatform = true;
-                    currentPlatformX = p.x;
-                    currentPlatformWidth = p.width;
-                    break;
+                if (Math.abs(enemy.y + enemy.height - p.y) < 1 && enemy.x + enemy.width > p.x && enemy.x < p.x + p.width) {
+                    enemyOnValidPlatform = true; currentPlatformX = p.x; currentPlatformWidth = p.width; break;
                 }
             }
-            
-            // Define patrol boundaries based on platform or original patrol range
             const minPatrolX = enemyOnValidPlatform ? currentPlatformX : enemy.originalX - enemy.patrolRange;
             const maxPatrolX = enemyOnValidPlatform ? currentPlatformX + currentPlatformWidth - enemy.width : enemy.originalX + enemy.patrolRange;
-
-
-            if (newX <= minPatrolX || newX >= maxPatrolX) {
-                newVx = -enemy.vx; // Reverse direction
-                newX = enemy.x + newVx; // Apply new velocity for one step to avoid getting stuck
-            }
-            // Clamp position just in case
+            if (newX <= minPatrolX || newX >= maxPatrolX) { newVx = -enemy.vx; newX = enemy.x + newVx; }
             newX = Math.max(minPatrolX, Math.min(newX, maxPatrolX));
-
             return {...enemy, x: newX, vx: newVx};
-        })
+        }).filter(enemy => enemy.x + enemy.width > cameraOffsetX) // Prune off-screen enemies
       );
+      
+      setPlatforms(prev => prev.filter(p => p.x + p.width > cameraOffsetX)); // Prune off-screen platforms
+      setTraps(prev => prev.filter(t => t.x + t.width > cameraOffsetX)); // Prune off-screen traps
 
-      // World Extension Logic
-      if (player && player.x + (VIEWPORT_WIDTH * WORLD_GENERATION_THRESHOLD_FACTOR) > lastGeneratedX) {
+      if (player && player.x + (GAME_LOGIC_WIDTH * WORLD_GENERATION_THRESHOLD_FACTOR) > lastGeneratedX) {
         const lastPlatform = platforms[platforms.length -1] || {y: INITIAL_PLAYER_Y + PLAYER_HEIGHT + 10};
         extendWorld(lastGeneratedX, lastPlatform.y);
       }
-      
-      // Update Camera
+
       if (player) {
-        // Camera follows player, keeping them roughly in the first third of the screen
-        const targetCameraX = player.x - VIEWPORT_WIDTH / 3; 
-        // Clamp camera: cannot go before 0, cannot go so far that viewport shows empty space if world ends
-        // For endless, right clamp is mostly about keeping player from outrunning generation instantly
-        const clampedCameraX = Math.max(0, targetCameraX); 
+        const targetCameraX = player.x - GAME_LOGIC_WIDTH / (isMobile ? 2 : 3); // Center more on mobile
+        const clampedCameraX = Math.max(0, targetCameraX);
         setCameraOffsetX(clampedCameraX);
       }
 
-    }, 1000 / 60); // 60 FPS
+    }, 1000 / 60);
 
     return () => clearInterval(gameLoop);
-  }, [gameState, player, platforms, enemies, traps, score, highScore, lastGeneratedX, extendWorld, cameraOffsetX]);
+  }, [gameState, player, platforms, enemies, traps, score, highScore, lastGeneratedX, extendWorld, cameraOffsetX, isMobile]);
 
 
   useEffect(() => {
@@ -412,39 +383,29 @@ export default function PixelJumperGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas with background color
     ctx.fillStyle = `hsl(${colorValues.background})`;
-    ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+    ctx.fillRect(0, 0, GAME_LOGIC_WIDTH, GAME_LOGIC_HEIGHT); // Fill with logical dimensions before scaling
 
-    // Only render game elements if not in menu
     if (gameState !== 'menu') {
         ctx.save();
-        ctx.translate(-cameraOffsetX, 0); // Apply camera offset
+        ctx.translate(-cameraOffsetX, 0);
 
-        // Draw platforms
         platforms.forEach(platform => {
             ctx.fillStyle = platform.color || `hsl(${colorValues.muted})`;
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
         });
-
-        // Draw food items
         foodItems.forEach(food => {
             if (!food.collected) {
             ctx.fillStyle = food.color || `hsl(${colorValues.accent})`;
             ctx.fillRect(food.x, food.y, food.width, food.height);
             }
         });
-
-        // Draw enemies
         enemies.forEach(enemy => {
             ctx.fillStyle = enemy.color || `hsl(${colorValues.enemyColor})`;
             ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         });
-        
-        // Draw traps
         traps.forEach(trap => {
             ctx.fillStyle = trap.color || `hsl(${colorValues.trapColor})`;
-            // Simple triangle for trap
             ctx.beginPath();
             ctx.moveTo(trap.x, trap.y + trap.height);
             ctx.lineTo(trap.x + trap.width / 2, trap.y);
@@ -452,67 +413,59 @@ export default function PixelJumperGame() {
             ctx.closePath();
             ctx.fill();
         });
-
-        // Draw player
         if (player) {
             ctx.fillStyle = player.color || `hsl(${colorValues.primary})`;
             ctx.fillRect(player.x, player.y, player.width, player.height);
         }
-        ctx.restore(); // Restore context after camera offset
+        ctx.restore();
 
-        // HUD - Drawn on top, not affected by camera
+        // HUD (drawn on top, not affected by camera, respects logical dimensions)
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.font = '18px "Space Grotesk", sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(`Score: ${score}`, 10, 25);
         ctx.textAlign = 'right';
-        ctx.fillText(`High Score: ${highScore}`, VIEWPORT_WIDTH - 10, 25);
+        ctx.fillText(`High Score: ${highScore}`, GAME_LOGIC_WIDTH - 10, 25);
     }
 
-
-    // Game Over messages
     if (gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') {
-        ctx.fillStyle = `hsla(${colorValues.destructive}, 0.8)`;
-        ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT); // Overlay
-        
+        ctx.fillStyle = `hsla(${colorValues.card}, 0.9)`; // Slightly transparent card color for overlay
+        ctx.fillRect(0, 0, GAME_LOGIC_WIDTH, GAME_LOGIC_HEIGHT);
+
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
-        
+
         ctx.font = 'bold 36px "Space Grotesk", sans-serif';
-        ctx.fillText('Game Over!', VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 60);
-        
+        ctx.fillText('Game Over!', GAME_LOGIC_WIDTH / 2, GAME_LOGIC_HEIGHT / 2 - 60);
+
         ctx.font = '20px "Space Grotesk", sans-serif';
         let causeMessage = 'An unknown error occurred.';
-        if (gameState === 'game_over_fall') {
-            causeMessage = 'You fell!';
-        } else if (gameState === 'game_over_enemy') {
-            causeMessage = 'Hit by an enemy!';
-        } else if (gameState === 'game_over_trap') {
-            causeMessage = 'Stepped on a trap!';
-        }
-        ctx.fillText(causeMessage, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 - 20);
-        ctx.fillText(`Final Score: ${score}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 20);
-        ctx.fillText(`High Score: ${highScore}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 50);
+        if (gameState === 'game_over_fall') causeMessage = 'You fell!';
+        else if (gameState === 'game_over_enemy') causeMessage = 'Hit by an enemy!';
+        else if (gameState === 'game_over_trap') causeMessage = 'Stepped on a trap!';
+        ctx.fillText(causeMessage, GAME_LOGIC_WIDTH / 2, GAME_LOGIC_HEIGHT / 2 - 20);
+        ctx.fillText(`Final Score: ${score}`, GAME_LOGIC_WIDTH / 2, GAME_LOGIC_HEIGHT / 2 + 20);
+        ctx.fillText(`High Score: ${highScore}`, GAME_LOGIC_WIDTH / 2, GAME_LOGIC_HEIGHT / 2 + 50);
     }
 
-  }, [gameState, player, platforms, foodItems, enemies, traps, score, highScore, colorValues, cameraOffsetX, lastGeneratedX]);
+  }, [gameState, player, platforms, foodItems, enemies, traps, score, highScore, colorValues, cameraOffsetX, lastGeneratedX, actualCanvasSize]);
 
 
   if (gameState === 'menu') {
     return (
-      <div className="flex flex-col items-center justify-center p-4 min-h-[70vh] gap-6">
+      <div className="flex flex-col items-center justify-center p-4 min-h-[70vh] gap-6 w-full">
         <Card className="w-full max-w-md bg-card/90 shadow-xl text-center">
           <CardHeader>
-            <CardTitle className="text-4xl font-headline text-primary flex items-center justify-center gap-2">
-                <Gamepad2 size={36} /> Pixel Jumper Endless
+            <CardTitle className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2">
+                <Gamepad2 size={isMobile ? 30: 36} /> Pixel Jumper Endless
             </CardTitle>
-            <CardContent className="text-muted-foreground">Jump, collect, and survive as long as you can!</CardContent>
+            <CardContent className="text-muted-foreground text-sm md:text-base">Jump, collect, and survive as long as you can!</CardContent>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline">
+            <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg">
               <Play className="mr-2" /> Start Game
             </Button>
-             <p className="text-sm text-muted-foreground pt-2">Current High Score: {highScore}</p>
+             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: {highScore}</p>
           </CardContent>
         </Card>
       </div>
@@ -520,48 +473,88 @@ export default function PixelJumperGame() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 p-4 md:p-8">
-      <Card className="w-full max-w-[800px] bg-card/90 shadow-xl overflow-hidden">
+    <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
+      <Card className="w-full bg-card/90 shadow-xl overflow-hidden" style={{maxWidth: actualCanvasSize.width }}>
         <CardHeader className="text-center pb-2">
-            <CardTitle className="text-3xl font-headline text-primary">
+            <CardTitle className="text-2xl md:text-3xl font-headline text-primary">
               Pixel Jumper Endless
             </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4">
-            <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background">
+        <CardContent className="flex flex-col items-center gap-4 p-2 sm:p-4">
+            <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height }}>
                 <canvas
                 ref={canvasRef}
-                width={VIEWPORT_WIDTH}
-                height={VIEWPORT_HEIGHT}
+                width={GAME_LOGIC_WIDTH} // Logical width
+                height={GAME_LOGIC_HEIGHT} // Logical height
+                style={{ width: actualCanvasSize.width, height: actualCanvasSize.height, display: 'block' }} // Scaled display size
                 aria-label="Pixel Jumper endless game board"
                 role="img"
-                tabIndex={0} // Make canvas focusable
+                tabIndex={0}
                 />
             </div>
           {(gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') && (
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground">
-                <RotateCcw className="mr-2" /> Try Again
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 mt-4">
+              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base">
+                <RotateCcw className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Try Again
               </Button>
-              <Button onClick={() => setGameState('menu')} size="lg" variant="outline">
-                <Home className="mr-2" /> Main Menu
+              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base">
+                <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Main Menu
               </Button>
             </div>
           )}
-           {gameState === 'playing' && (
-             <p className="text-muted-foreground text-sm">Use <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move, <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd>/<kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">W</kbd>/<kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Up Arrow</kbd> to jump. Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> for menu.</p>
+           {gameState === 'playing' && !isMobile && (
+             <p className="text-muted-foreground text-xs md:text-sm text-center">Use <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move, <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">W</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Up Arrow</kbd> to jump. Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> for menu.</p>
+           )}
+           {gameState === 'playing' && isMobile && (
+             <p className="text-muted-foreground text-xs text-center">Use on-screen controls. Press <kbd className="px-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> icon for menu (if available).</p>
            )}
         </CardContent>
       </Card>
-       <div className="text-center text-muted-foreground p-4 bg-card/50 rounded-lg max-w-md">
-        <h3 className="text-xl font-headline text-foreground mb-2">How to Play</h3>
-        <ul className="list-disc list-inside text-left space-y-1">
-          <li>Use <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> for left/right movement.</li>
-          <li>Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Spacebar</kbd>, <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">W</kbd>, or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Up Arrow</kbd> to jump.</li>
+
+      {isMobile && gameState === 'playing' && (
+        <div className="fixed bottom-4 left-4 right-4 flex justify-between items-center z-10 p-2 bg-card/50 rounded-lg">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="aspect-square h-16 w-16"
+              onTouchStart={() => handleMobileMove('left')}
+              onTouchEnd={() => handleMobileMove('stop')}
+              onClick={() => handleMobileMove('left')} // Fallback for click events
+              aria-label="Move Left"
+            >
+              <ArrowLeft size={32} />
+            </Button>
+            <Button
+              variant="outline"
+              className="aspect-square h-16 w-16"
+              onTouchStart={() => handleMobileMove('right')}
+              onTouchEnd={() => handleMobileMove('stop')}
+              onClick={() => handleMobileMove('right')} // Fallback
+              aria-label="Move Right"
+            >
+              <ArrowRight size={32} />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            className="aspect-square h-20 w-20 rounded-full" // Larger jump button
+            onClick={handleMobileJump}
+            aria-label="Jump"
+          >
+            <ArrowUp size={40} />
+          </Button>
+        </div>
+      )}
+
+       <div className="text-center text-muted-foreground p-2 md:p-4 bg-card/50 rounded-lg max-w-md text-xs md:text-sm mt-4">
+        <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play</h3>
+        <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
+          <li>{isMobile ? "Use on-screen buttons" : "Use Arrow Keys or A/D"} for left/right movement.</li>
+          <li>{isMobile ? "Tap the large up arrow button" : "Press Spacebar, W, or Up Arrow"} to jump.</li>
           <li>Collect <span className="text-accent font-semibold">blue items</span> for points.</li>
           <li>Avoid <span style={{color: `hsl(${colorValues.enemyColor})`}} className="font-semibold">orange enemies</span> and <span style={{color: `hsl(${colorValues.trapColor})`}} className="font-semibold">red traps</span>!</li>
           <li>Don't fall off the screen! Survive as long as you can.</li>
-          <li>Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to return to the main menu.</li>
+          <li>{isMobile ? "Use game's menu options" : "Press Esc"} to return to the main menu.</li>
         </ul>
       </div>
     </div>

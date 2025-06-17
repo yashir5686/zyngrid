@@ -5,34 +5,37 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getHighScore, saveHighScore } from '@/lib/local-storage';
-import { RefreshCcw, Trophy } from 'lucide-react';
+import { RefreshCcw, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const GRID_SIZE = 20;
-const CANVAS_WIDTH = 400;
-const CANVAS_HEIGHT = 400;
-const CELL_SIZE = CANVAS_WIDTH / GRID_SIZE;
+const MAX_CANVAS_WIDTH = 400; // Max width for the canvas
 
 type Position = { x: number; y: number };
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
-const getRandomPosition = (): Position => ({
-  x: Math.floor(Math.random() * GRID_SIZE),
-  y: Math.floor(Math.random() * GRID_SIZE),
+const getRandomPosition = (currentGridSize: number): Position => ({
+  x: Math.floor(Math.random() * currentGridSize),
+  y: Math.floor(Math.random() * currentGridSize),
 });
 
 export default function SnakeGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [snake, setSnake] = useState<Position[]>([{ x: 10, y: 10 }]);
-  const [food, setFood] = useState<Position>(getRandomPosition());
+  const [food, setFood] = useState<Position>(getRandomPosition(GRID_SIZE));
   const [direction, setDirection] = useState<Direction>('RIGHT');
   const [score, setScore] = useState(0);
   const [highScore, setHighScoreState] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameSpeed, setGameSpeed] = useState(150); 
+  const [gameSpeed, setGameSpeed] = useState(150);
+  const isMobile = useIsMobile();
+
+  const [canvasSize, setCanvasSize] = useState({ width: MAX_CANVAS_WIDTH, height: MAX_CANVAS_WIDTH });
+  const [cellSize, setCellSize] = useState(MAX_CANVAS_WIDTH / GRID_SIZE);
 
   const [colorValues, setColorValues] = useState({
-    card: '220 11% 20%', 
+    card: '220 11% 20%',
     border: '220 11% 30%',
     accent: '197 84% 54%',
     accentForeground: '0 0% 98%',
@@ -64,49 +67,72 @@ export default function SnakeGame() {
     setHighScoreState(getHighScore('snake'));
   }, []);
 
+  const updateCanvasDimensions = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth;
+      const newSize = Math.min(MAX_CANVAS_WIDTH, screenWidth - (isMobile ? 32 : 64)); // Smaller padding on mobile
+      setCanvasSize({ width: newSize, height: newSize });
+      setCellSize(newSize / GRID_SIZE);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    updateCanvasDimensions();
+    window.addEventListener('resize', updateCanvasDimensions);
+    return () => window.removeEventListener('resize', updateCanvasDimensions);
+  }, [updateCanvasDimensions]);
+
   const resetGame = useCallback(() => {
-    setSnake([{ x: 10, y: 10 }]);
-    setFood(getRandomPosition());
+    setSnake([{ x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) }]);
+    setFood(getRandomPosition(GRID_SIZE));
     setDirection('RIGHT');
     setScore(0);
     setGameOver(false);
     setGameStarted(true);
     setGameSpeed(150);
-    canvasRef.current?.focus(); 
+    canvasRef.current?.focus();
   }, []);
 
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
         e.preventDefault();
       }
       if (e.key === 'Escape') {
-        e.preventDefault();
-        resetGame(); // Reset game on Escape press
+        resetGame();
         return;
       }
-
-      switch (e.key) {
-        case 'ArrowUp':
-          if (direction !== 'DOWN') setDirection('UP');
-          break;
-        case 'ArrowDown':
-          if (direction !== 'UP') setDirection('DOWN');
-          break;
-        case 'ArrowLeft':
-          if (direction !== 'RIGHT') setDirection('LEFT');
-          break;
-        case 'ArrowRight':
-          if (direction !== 'LEFT') setDirection('RIGHT');
-          break;
-      }
+      changeDirection(e.key);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [direction, gameOver, gameStarted, resetGame]);
+
+  const changeDirection = (keyOrDirection: string) => {
+    let newDirection: Direction | null = null;
+    switch (keyOrDirection) {
+      case 'ArrowUp':
+      case 'UP':
+        if (direction !== 'DOWN') newDirection = 'UP';
+        break;
+      case 'ArrowDown':
+      case 'DOWN':
+        if (direction !== 'UP') newDirection = 'DOWN';
+        break;
+      case 'ArrowLeft':
+      case 'LEFT':
+        if (direction !== 'RIGHT') newDirection = 'LEFT';
+        break;
+      case 'ArrowRight':
+      case 'RIGHT':
+        if (direction !== 'LEFT') newDirection = 'RIGHT';
+        break;
+    }
+    if (newDirection) setDirection(newDirection);
+  };
 
   useEffect(() => {
     if (!gameStarted || gameOver) return;
@@ -139,7 +165,7 @@ export default function SnakeGame() {
 
         if (head.x === food.x && head.y === food.y) {
           setScore(s => s + 10);
-          setFood(getRandomPosition());
+          setFood(getRandomPosition(GRID_SIZE));
           setGameSpeed(s => Math.max(50, s - 5));
         } else {
           newSnake.pop();
@@ -167,105 +193,129 @@ export default function SnakeGame() {
     if (!ctx) return;
 
     ctx.fillStyle = `hsl(${colorValues.card})`;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
     ctx.strokeStyle = `hsl(${colorValues.border})`;
     for (let i = 0; i <= GRID_SIZE; i++) {
         ctx.beginPath();
-        ctx.moveTo(i * CELL_SIZE, 0);
-        ctx.lineTo(i * CELL_SIZE, CANVAS_HEIGHT);
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, canvasSize.height);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, i * CELL_SIZE);
-        ctx.lineTo(CANVAS_WIDTH, i * CELL_SIZE);
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(canvasSize.width, i * cellSize);
         ctx.stroke();
     }
-    
+
     ctx.fillStyle = `hsl(${colorValues.accent})`;
-    ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
     ctx.strokeStyle = `hsl(${colorValues.accentForeground})`;
-    ctx.strokeRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    ctx.strokeRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
 
     ctx.fillStyle = `hsl(${colorValues.primary})`;
     snake.forEach((segment, index) => {
-      ctx.fillRect(segment.x * CELL_SIZE, segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
       ctx.strokeStyle = `hsl(${colorValues.primaryForeground})`;
-      ctx.strokeRect(segment.x * CELL_SIZE, segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      ctx.strokeRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
       if (index === 0) {
-        ctx.fillStyle = `hsl(${colorValues.background})`; 
-        const eyeSize = CELL_SIZE / 5;
-        const eyeOffset = CELL_SIZE / 4;
+        ctx.fillStyle = `hsl(${colorValues.background})`;
+        const eyeSize = cellSize / 5;
+        const eyeOffset = cellSize / 4;
         if (direction === 'UP' || direction === 'DOWN') {
-            ctx.fillRect(segment.x * CELL_SIZE + eyeOffset, segment.y * CELL_SIZE + eyeOffset, eyeSize, eyeSize);
-            ctx.fillRect(segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize, segment.y * CELL_SIZE + eyeOffset, eyeSize, eyeSize);
-        } else { 
-            ctx.fillRect(segment.x * CELL_SIZE + eyeOffset, segment.y * CELL_SIZE + eyeOffset, eyeSize, eyeSize);
-            ctx.fillRect(segment.x * CELL_SIZE + eyeOffset, segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
+            ctx.fillRect(segment.x * cellSize + eyeOffset, segment.y * cellSize + eyeOffset, eyeSize, eyeSize);
+            ctx.fillRect(segment.x * cellSize + cellSize - eyeOffset - eyeSize, segment.y * cellSize + eyeOffset, eyeSize, eyeSize);
+        } else {
+            ctx.fillRect(segment.x * cellSize + eyeOffset, segment.y * cellSize + eyeOffset, eyeSize, eyeSize);
+            ctx.fillRect(segment.x * cellSize + eyeOffset, segment.y * cellSize + cellSize - eyeOffset - eyeSize, eyeSize, eyeSize);
         }
+        ctx.fillStyle = `hsl(${colorValues.primary})`; // Reset fillStyle for next segment
       }
     });
 
     if (!gameStarted && !gameOver) {
       ctx.fillStyle = `hsla(${colorValues.foreground}, 0.8)`;
       ctx.textAlign = 'center';
-      ctx.font = '24px "Space Grotesk", sans-serif';
-      ctx.fillText('Press "Start Game" to Play!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
-    }
-    
-    if (gameOver) {
-      ctx.fillStyle = `hsla(${colorValues.destructiveHslComps}, 0.8)`;
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 48px "Space Grotesk", sans-serif';
-      ctx.fillText('Game Over!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
-      ctx.font = '24px "Space Grotesk", sans-serif';
-      ctx.fillText(`Final Score: ${score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+      ctx.font = `${Math.max(16, canvasSize.width / 20)}px "Space Grotesk", sans-serif`;
+      ctx.fillText('Press "Start Game" to Play!', canvasSize.width / 2, canvasSize.height / 2);
     }
 
-  }, [snake, food, gameOver, gameStarted, score, direction, colorValues]);
+    if (gameOver) {
+      ctx.fillStyle = `hsla(${colorValues.destructiveHslComps}, 0.8)`;
+      ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
+      ctx.fillStyle = `hsl(${colorValues.foreground})`;
+      ctx.textAlign = 'center';
+      ctx.font = `bold ${Math.max(24, canvasSize.width / 12)}px "Space Grotesk", sans-serif`;
+      ctx.fillText('Game Over!', canvasSize.width / 2, canvasSize.height / 2 - 20);
+      ctx.font = `${Math.max(16, canvasSize.width / 20)}px "Space Grotesk", sans-serif`;
+      ctx.fillText(`Final Score: ${score}`, canvasSize.width / 2, canvasSize.height / 2 + 20);
+    }
+
+  }, [snake, food, gameOver, gameStarted, score, direction, colorValues, canvasSize, cellSize]);
 
 
   return (
-    <div className="flex flex-col items-center gap-6 p-4 md:p-8">
+    <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
       <Card className="w-full max-w-md bg-card/90 shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-headline text-primary text-center">Classic Snake</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl font-headline text-primary text-center">Classic Snake</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
-          <div className="flex justify-around w-full text-lg">
+          <div className="flex justify-around w-full text-md md:text-lg">
             <p className="font-semibold">Score: <span className="text-accent font-headline">{score}</span></p>
-            <p className="font-semibold flex items-center"><Trophy className="mr-2 h-5 w-5 text-yellow-400" /> High Score: <span className="text-accent font-headline">{highScore}</span></p>
+            <p className="font-semibold flex items-center"><Trophy className="mr-1 md:mr-2 h-4 w-4 md:h-5 md:w-5 text-yellow-400" /> High Score: <span className="text-accent font-headline">{highScore}</span></p>
           </div>
-          <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background">
+          <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: canvasSize.width, height: canvasSize.height }}>
             <canvas
               ref={canvasRef}
-              width={CANVAS_WIDTH}
-              height={CANVAS_HEIGHT}
+              width={canvasSize.width}
+              height={canvasSize.height}
               aria-label="Snake game board"
               role="img"
-              tabIndex={0} 
+              tabIndex={0}
             />
           </div>
           {!gameStarted || gameOver ? (
-            <Button onClick={resetGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline">
+            <Button onClick={resetGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg">
               <RefreshCcw className="mr-2 h-5 w-5" /> {gameOver ? 'Play Again' : 'Start Game'}
             </Button>
           ) : (
-             <p className="text-muted-foreground text-sm">Use arrow keys. Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset.</p>
+             <p className="text-muted-foreground text-xs md:text-sm text-center">
+               {isMobile ? "Use on-screen controls." : "Use arrow keys."} Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset.
+             </p>
           )}
         </CardContent>
       </Card>
-      <div className="text-center text-muted-foreground p-4 bg-card/50 rounded-lg max-w-md">
-        <h3 className="text-xl font-headline text-foreground mb-2">How to Play</h3>
-        <ul className="list-disc list-inside text-left space-y-1">
-          <li>Use <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> to control the snake.</li>
+
+      {isMobile && gameStarted && !gameOver && (
+        <div className="mt-4 grid grid-cols-3 gap-2 w-full max-w-xs">
+          <div></div> {/* Empty cell for layout */}
+          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('UP')} aria-label="Move Up">
+            <ArrowUp size={32} />
+          </Button>
+          <div></div> {/* Empty cell for layout */}
+
+          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('LEFT')} aria-label="Move Left">
+            <ArrowLeft size={32} />
+          </Button>
+          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('DOWN')} aria-label="Move Down">
+            <ArrowDown size={32} />
+          </Button>
+          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('RIGHT')} aria-label="Move Right">
+            <ArrowRight size={32} />
+          </Button>
+        </div>
+      )}
+
+      <div className="text-center text-muted-foreground p-2 md:p-4 bg-card/50 rounded-lg max-w-md text-xs md:text-sm">
+        <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play</h3>
+        <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
+          <li>{isMobile ? "Use the on-screen buttons" : "Use Arrow Keys"} to control the snake.</li>
           <li>Eat the <span className="text-accent font-semibold">blue food</span> to grow and score points.</li>
           <li>Avoid hitting the walls or your own tail.</li>
           <li>The game speeds up as you eat more food!</li>
-          <li>Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset the game.</li>
+          <li>Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset the game (desktop only).</li>
         </ul>
       </div>
     </div>
   );
 }
-
-    
