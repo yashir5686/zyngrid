@@ -39,5 +39,4 @@ export interface PixelJumperLevel {
   platforms: Platform[];
   foodItems: FoodItem[];
   goal: Goal;
-  backgroundColor?: string; // Optional background for the level
 }
