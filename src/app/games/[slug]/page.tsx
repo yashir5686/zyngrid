@@ -1,14 +1,12 @@
+
 import { games } from '@/data/games';
 import type { Game } from '@/types';
 import { notFound } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Construction } from 'lucide-react';
 import Image from 'next/image';
-
-// Dynamically import SnakeGamePage for client-side rendering
-const SnakeGamePage = dynamic(() => import('@/app/games/snake/page'), { ssr: false });
+import DynamicSnakeLoader from '@/components/dynamic-snake-loader';
 
 export async function generateStaticParams() {
   return games.map((game) => ({
@@ -29,7 +27,7 @@ export default function GamePage({ params }: GamePageProps) {
   }
 
   if (game.id === 'snake') {
-    return <SnakeGamePage />;
+    return <DynamicSnakeLoader />;
   }
 
   // Placeholder for other games
@@ -52,8 +50,8 @@ export default function GamePage({ params }: GamePageProps) {
                  <Image
                     src={game.thumbnail}
                     alt={game.name}
-                    fill // Replaced layout="fill" and objectFit="contain"
-                    style={{ objectFit: 'contain' }} // Added style for objectFit
+                    fill
+                    style={{ objectFit: 'contain' }}
                     data-ai-hint={game.dataAiHint || 'game concept'}
                   />
             </div>
