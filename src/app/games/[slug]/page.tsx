@@ -52,8 +52,8 @@ export default function GamePage({ params }: GamePageProps) {
                  <Image
                     src={game.thumbnail}
                     alt={game.name}
-                    layout="fill"
-                    objectFit="contain"
+                    fill // Replaced layout="fill" and objectFit="contain"
+                    style={{ objectFit: 'contain' }} // Added style for objectFit
                     data-ai-hint={game.dataAiHint || 'game concept'}
                   />
             </div>

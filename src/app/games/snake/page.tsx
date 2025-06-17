@@ -3,13 +3,14 @@
 import SnakeGame from '@/components/snake-game';
 import { games, featuredGame } from '@/data/games';
 import { addRecentlyPlayed } from '@/lib/local-storage';
+import type { Game } from '@/types';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 export default function SnakeGamePage() {
-  const snakeGameInfo = games.find(g => g.id === 'snake') || featuredGame;
+  const snakeGameInfo : Game | undefined = games.find(g => g.id === 'snake');
 
   useEffect(() => {
     if (snakeGameInfo) {

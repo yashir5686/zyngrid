@@ -28,4 +28,5 @@ export const games: Game[] = [
   },
 ];
 
+// Ensure featuredGame correctly finds 'snake' or falls back.
 export const featuredGame: Game = games.find(game => game.id === 'snake') || games[0];
