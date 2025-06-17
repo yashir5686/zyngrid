@@ -1,56 +1,41 @@
 
-import type { PixelJumperLevel } from '@/types';
+// This file now primarily defines the metadata for levels (ID, name)
+// The actual level content (platforms, items, enemies, traps) is procedurally generated
+// in pixel-jumper-game.tsx
 
-export const pixelJumperLevels: PixelJumperLevel[] = [
+// We only need to export the configuration that the level selection UI and progression system use.
+// The actual 'platforms', 'foodItems', 'goal' etc., will be generated.
+// For the type `PixelJumperLevel` in `types/index.ts`, those fields can be made optional
+// or the game component will just use the `id` and `name` from here and generate the rest.
+
+// For simplicity, we'll keep the structure for id and name,
+// which are used by the level selection dropdown.
+// The game component will use the levelIndex to seed its generation.
+
+type PixelJumperLevelConfig = {
+  id: number;
+  name: string;
+};
+
+export const pixelJumperLevels: PixelJumperLevelConfig[] = [
   {
     id: 1,
-    name: 'Tutorial Valley',
-    playerStart: { x: 50, y: 300 },
-    platforms: [
-      { x: 0, y: 350, width: 200, height: 20 },
-      { x: 250, y: 300, width: 150, height: 20 },
-      { x: 50, y: 200, width: 100, height: 20 },
-      { x: 450, y: 250, width: 200, height: 20 },
-    ],
-    foodItems: [
-      { x: 100, y: 320, width: 15, height: 15, collected: false },
-      { x: 300, y: 270, width: 15, height: 15, collected: false },
-      { x: 80, y: 170, width: 15, height: 15, collected: false },
-    ],
-    goal: { x: 550, y: 200, width: 30, height: 30 },
+    name: 'Grassy Plains', // Name changed to reflect generated nature
   },
   {
     id: 2,
-    name: 'The Ascent',
-    playerStart: { x: 30, y: 350 },
-    platforms: [
-      { x: 0, y: 400, width: 150, height: 20 },
-      { x: 200, y: 350, width: 100, height: 20 },
-      { x: 350, y: 300, width: 100, height: 20 },
-      { x: 250, y: 200, width: 80, height: 20 },
-      { x: 450, y: 150, width: 150, height: 20 },
-    ],
-    foodItems: [
-      { x: 230, y: 320, width: 15, height: 15, collected: false },
-      { x: 380, y: 270, width: 15, height: 15, collected: false },
-      { x: 270, y: 170, width: 15, height: 15, collected: false },
-    ],
-    goal: { x: 550, y: 100, width: 30, height: 30 },
+    name: 'Rocky Ascent',
   },
   {
     id: 3,
-    name: 'Final Leap',
-    playerStart: { x: 20, y: 100 },
-    platforms: [
-      { x: 0, y: 150, width: 100, height: 20 },
-      { x: 150, y: 250, width: 100, height: 20 }, // Requires a good jump
-      { x: 300, y: 350, width: 100, height: 20 },
-      { x: 500, y: 300, width: 150, height: 20 }, // Goal platform
-    ],
-    foodItems: [
-      { x: 180, y: 220, width: 15, height: 15, collected: false },
-      { x: 330, y: 320, width: 15, height: 15, collected: false },
-    ],
-    goal: { x: 580, y: 250, width: 30, height: 30 },
+    name: 'Perilous Peaks',
   },
+  {
+    id: 4,
+    name: 'The Gauntlet',
+  },
+  {
+    id: 5,
+    name: 'Final Frontier',
+  }
 ];
