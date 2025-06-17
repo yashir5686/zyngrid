@@ -1,12 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getHighScore, saveHighScore } from '@/lib/local-storage';
-import { RefreshCcw, Trophy, AlertTriangle } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-
+import { RefreshCcw, Trophy } from 'lucide-react';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 400;
@@ -32,7 +31,35 @@ export default function SnakeGame() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameSpeed, setGameSpeed] = useState(150); // Milliseconds
 
-  const { toast } = useToast();
+  const [colorValues, setColorValues] = useState({
+    card: '220 11% 20%', // Default HSL components
+    border: '220 11% 30%',
+    accent: '197 84% 54%',
+    accentForeground: '0 0% 98%',
+    primary: '286 82% 54%',
+    primaryForeground: '0 0% 98%',
+    background: '220 11% 15%',
+    foreground: '0 0% 98%',
+    destructiveHslComps: '0 72% 51%',
+  });
+
+  useEffect(() => {
+    // Fetch actual CSS variable values once the component is mounted
+    if (typeof window !== 'undefined' && document.documentElement) {
+      const computedStyle = getComputedStyle(document.documentElement);
+      setColorValues({
+        card: computedStyle.getPropertyValue('--card').trim(),
+        border: computedStyle.getPropertyValue('--border').trim(),
+        accent: computedStyle.getPropertyValue('--accent').trim(),
+        accentForeground: computedStyle.getPropertyValue('--accent-foreground').trim(),
+        primary: computedStyle.getPropertyValue('--primary').trim(),
+        primaryForeground: computedStyle.getPropertyValue('--primary-foreground').trim(),
+        background: computedStyle.getPropertyValue('--background').trim(),
+        foreground: computedStyle.getPropertyValue('--foreground').trim(),
+        destructiveHslComps: computedStyle.getPropertyValue('--destructive').trim(),
+      });
+    }
+  }, []);
 
   useEffect(() => {
     setHighScoreState(getHighScore('snake'));
@@ -76,7 +103,7 @@ export default function SnakeGame() {
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
-    const gameLoop = setInterval(() => {
+    const gameLoopInterval = setInterval(() => {
       setSnake(prevSnake => {
         const newSnake = [...prevSnake];
         const head = { ...newSnake[0] };
@@ -88,13 +115,11 @@ export default function SnakeGame() {
           case 'RIGHT': head.x += 1; break;
         }
 
-        // Wall collision
         if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
           setGameOver(true);
           return prevSnake;
         }
 
-        // Self collision
         for (let i = 1; i < newSnake.length; i++) {
           if (newSnake[i].x === head.x && newSnake[i].y === head.y) {
             setGameOver(true);
@@ -104,11 +129,9 @@ export default function SnakeGame() {
 
         newSnake.unshift(head);
 
-        // Food consumption
         if (head.x === food.x && head.y === food.y) {
           setScore(s => s + 10);
           setFood(getRandomPosition());
-          // Increase speed slightly
           setGameSpeed(s => Math.max(50, s - 5));
         } else {
           newSnake.pop();
@@ -117,7 +140,7 @@ export default function SnakeGame() {
       });
     }, gameSpeed);
 
-    return () => clearInterval(gameLoop);
+    return () => clearInterval(gameLoopInterval);
   }, [snake, direction, food, gameOver, gameStarted, gameSpeed]);
 
   useEffect(() => {
@@ -125,14 +148,9 @@ export default function SnakeGame() {
       if (score > highScore) {
         saveHighScore('snake', score);
         setHighScoreState(score);
-        toast({
-            title: "New High Score!",
-            description: `You achieved a new high score of ${score}!`,
-            variant: "default",
-        });
       }
     }
-  }, [gameOver, score, highScore, toast]);
+  }, [gameOver, score, highScore]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -140,12 +158,10 @@ export default function SnakeGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.fillStyle = 'hsl(var(--card))'; // Use card background for canvas
+    ctx.fillStyle = `hsl(${colorValues.card})`;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw grid lines (optional, for retro feel)
-    ctx.strokeStyle = 'hsl(var(--border))';
+    ctx.strokeStyle = `hsl(${colorValues.border})`;
     for (let i = 0; i <= GRID_SIZE; i++) {
         ctx.beginPath();
         ctx.moveTo(i * CELL_SIZE, 0);
@@ -157,45 +173,39 @@ export default function SnakeGame() {
         ctx.stroke();
     }
     
-    // Draw food
-    ctx.fillStyle = 'hsl(var(--accent))'; // Electric blue for food
+    ctx.fillStyle = `hsl(${colorValues.accent})`;
     ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    ctx.strokeStyle = 'hsl(var(--accent-foreground))'; // Outline for food
+    ctx.strokeStyle = `hsl(${colorValues.accentForeground})`;
     ctx.strokeRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
-
-    // Draw snake
-    ctx.fillStyle = 'hsl(var(--primary))'; // Vibrant purple for snake
+    ctx.fillStyle = `hsl(${colorValues.primary})`;
     snake.forEach((segment, index) => {
       ctx.fillRect(segment.x * CELL_SIZE, segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      // Snake outline
-      ctx.strokeStyle = 'hsl(var(--primary-foreground))'; 
+      ctx.strokeStyle = `hsl(${colorValues.primaryForeground})`;
       ctx.strokeRect(segment.x * CELL_SIZE, segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      // Snake eyes on head
       if (index === 0) {
-        ctx.fillStyle = 'hsl(var(--background))'; // Eyes color
+        ctx.fillStyle = `hsl(${colorValues.background})`; 
         const eyeSize = CELL_SIZE / 5;
         const eyeOffset = CELL_SIZE / 4;
         if (direction === 'UP' || direction === 'DOWN') {
             ctx.fillRect(segment.x * CELL_SIZE + eyeOffset, segment.y * CELL_SIZE + eyeOffset, eyeSize, eyeSize);
             ctx.fillRect(segment.x * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize, segment.y * CELL_SIZE + eyeOffset, eyeSize, eyeSize);
-        } else { // LEFT or RIGHT
+        } else { 
             ctx.fillRect(segment.x * CELL_SIZE + eyeOffset, segment.y * CELL_SIZE + eyeOffset, eyeSize, eyeSize);
             ctx.fillRect(segment.x * CELL_SIZE + eyeOffset, segment.y * CELL_SIZE + CELL_SIZE - eyeOffset - eyeSize, eyeSize, eyeSize);
         }
       }
     });
 
-
     if (!gameStarted && !gameOver) {
-      ctx.fillStyle = 'hsla(var(--foreground), 0.8)';
+      ctx.fillStyle = `hsla(${colorValues.foreground}, 0.8)`;
       ctx.textAlign = 'center';
       ctx.font = '24px "Space Grotesk", sans-serif';
       ctx.fillText('Press "Start Game" to Play!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     }
     
     if (gameOver) {
-      ctx.fillStyle = 'hsla(var(--destructive), 0.8)';
+      ctx.fillStyle = `hsla(${colorValues.destructiveHslComps}, 0.8)`;
       ctx.textAlign = 'center';
       ctx.font = 'bold 48px "Space Grotesk", sans-serif';
       ctx.fillText('Game Over!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
@@ -203,7 +213,7 @@ export default function SnakeGame() {
       ctx.fillText(`Final Score: ${score}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
     }
 
-  }, [snake, food, gameOver, gameStarted, score, direction]);
+  }, [snake, food, gameOver, gameStarted, score, direction, colorValues]);
 
 
   return (
