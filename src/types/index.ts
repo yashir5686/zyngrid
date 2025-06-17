@@ -30,8 +30,6 @@ export interface FoodItem extends PixelJumperEntity {
   collected: boolean;
 }
 
-export interface Goal extends PixelJumperEntity {}
-
 export interface Enemy extends PixelJumperEntity {
   vx: number; // Horizontal velocity for patrolling
   originalX: number; // To determine patrol range
@@ -39,15 +37,3 @@ export interface Enemy extends PixelJumperEntity {
 }
 
 export interface Trap extends PixelJumperEntity {}
-
-export interface PixelJumperLevel {
-  id: number;
-  name: string;
-  // These will be generated dynamically now
-  playerStart: { x: number; y: number };
-  platforms: Platform[];
-  foodItems: FoodItem[];
-  enemies: Enemy[];
-  traps: Trap[];
-  goal: Goal;
-}
