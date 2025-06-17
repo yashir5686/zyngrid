@@ -56,7 +56,7 @@ export default function PixelJumperGame() {
   const [maxUnlockedLevel, setMaxUnlockedLevel] = useState(1);
   const [cameraOffsetX, setCameraOffsetX] = useState(0);
   const [levelContentWidth, setLevelContentWidth] = useState(VIEWPORT_WIDTH);
-  
+
   const [colorValues, setColorValues] = useState({
     background: '220 11% 15%',
     foreground: '0 0% 98%',
@@ -65,8 +65,8 @@ export default function PixelJumperGame() {
     destructive: '0 72% 51%',
     card: '220 11% 20%',
     muted: '220 11% 22%',
-    enemyColor: '30 100% 50%', 
-    trapColor: '0 100% 50%', 
+    enemyColor: '30 100% 50%',
+    trapColor: '0 100% 50%',
   });
 
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -93,7 +93,7 @@ export default function PixelJumperGame() {
     const foodItems: FoodItem[] = [];
     const enemies: Enemy[] = [];
     const traps: Trap[] = [];
-    
+
     let currentX = 50;
     const startPlatformY = VIEWPORT_HEIGHT - 50 - getRandomInt(0, 50);
     const playerStart = { x: currentX + 20, y: startPlatformY - PLAYER_HEIGHT - 10 };
@@ -103,28 +103,28 @@ export default function PixelJumperGame() {
     platforms.push(startPlatform);
     currentX += startPlatform.width;
 
-    const numPlatforms = 10 + levelIdx * 2 + getRandomInt(2,5); // Ensure a good number of platforms for length
+    const numPlatforms = 10 + levelIdx * 2 + getRandomInt(2,5);
     let lastPlatform = startPlatform;
-    const minLevelWidth = VIEWPORT_WIDTH * (1.5 + levelIdx * 0.2); // Ensure levels get longer
+    const minLevelWidth = VIEWPORT_WIDTH * (1.5 + levelIdx * 0.2);
 
     for (let i = 0; i < numPlatforms || currentX < minLevelWidth; i++) {
-      const gapX = getRandomInt(60, 130); 
+      const gapX = getRandomInt(60, 130);
       currentX += gapX;
-      
-      let newY = lastPlatform.y + getRandomInt(-90, 90); 
-      newY = Math.max(150, Math.min(VIEWPORT_HEIGHT - 80, newY)); 
+
+      let newY = lastPlatform.y + getRandomInt(-90, 90);
+      newY = Math.max(150, Math.min(VIEWPORT_HEIGHT - 80, newY));
 
       const newWidth = getRandomInt(100, 250);
       const platform: Platform = { x: currentX, y: newY, width: newWidth, height: 20, color: `hsl(${colorValues.muted})` };
       platforms.push(platform);
 
-      if (Math.random() < 0.65) { 
-        foodItems.push({ 
-            x: platform.x + platform.width / 2 - 7.5, 
-            y: platform.y - 25, 
-            width: 15, height: 15, 
-            collected: false, 
-            color: `hsl(${colorValues.accent})` 
+      if (Math.random() < 0.65) {
+        foodItems.push({
+            x: platform.x + platform.width / 2 - 7.5,
+            y: platform.y - 25,
+            width: 15, height: 15,
+            collected: false,
+            color: `hsl(${colorValues.accent})`
         });
       }
 
@@ -141,19 +141,19 @@ export default function PixelJumperGame() {
          });
       }
 
-      if (i > 1 && Math.random() < (0.20 + levelIdx * 0.05)) { 
-        if (gapX > TRAP_SIZE + 30 && lastPlatform.y > VIEWPORT_HEIGHT - 100) { 
+      if (i > 1 && Math.random() < (0.20 + levelIdx * 0.05)) {
+        if (gapX > TRAP_SIZE + 30 && lastPlatform.y > VIEWPORT_HEIGHT - 100) {
             traps.push({
                 x: lastPlatform.x + lastPlatform.width + (gapX / 2) - (TRAP_SIZE / 2),
-                y: VIEWPORT_HEIGHT - TRAP_SIZE - 10, 
+                y: VIEWPORT_HEIGHT - TRAP_SIZE - 10,
                 width: TRAP_SIZE,
                 height: TRAP_SIZE,
                 color: `hsl(${colorValues.trapColor})`,
             });
-        } else if (platform.width > TRAP_SIZE + 40 && platform.y > VIEWPORT_HEIGHT - 100 && Math.random() < 0.5) { 
+        } else if (platform.width > TRAP_SIZE + 40 && platform.y > VIEWPORT_HEIGHT - 100 && Math.random() < 0.5) {
              traps.push({
                 x: platform.x + getRandomInt(15, platform.width - TRAP_SIZE - 15),
-                y: platform.y - TRAP_SIZE, 
+                y: platform.y - TRAP_SIZE,
                 width: TRAP_SIZE,
                 height: TRAP_SIZE,
                 color: `hsl(${colorValues.trapColor})`,
@@ -163,13 +163,13 @@ export default function PixelJumperGame() {
       lastPlatform = platform;
       currentX += platform.width;
     }
-    
-    const calculatedLevelWidth = Math.max(currentX + 100, minLevelWidth + 200); // Ensure goal is past last platform + padding
+
+    const calculatedLevelWidth = Math.max(currentX + 100, minLevelWidth + 200);
     const goalPlatform = platforms[platforms.length -1];
     const goalX = Math.max(goalPlatform.x + goalPlatform.width + 50, calculatedLevelWidth - 150);
-    const goal: Goal = { 
-        x: goalX, 
-        y: goalPlatform.y - 40, 
+    const goal: Goal = {
+        x: goalX,
+        y: goalPlatform.y - 40,
         width: 30, height: 30, color: `hsl(${colorValues.primary})`
     };
     if (goal.y < 0) goal.y = 20;
@@ -185,7 +185,7 @@ export default function PixelJumperGame() {
         return;
     }
     const { playerStart, platforms, foodItems, enemies, traps, goal, calculatedLevelWidth } = generateProceduralLevelContent(levelIndex);
-    
+
     setPlayer({
       x: playerStart.x,
       y: playerStart.y,
@@ -205,7 +205,7 @@ export default function PixelJumperGame() {
     setScore(0);
     setLevelHighScore(getPixelJumperLevelHighScore(staticPixelJumperLevelsConfig[levelIndex].id));
     setLevelContentWidth(calculatedLevelWidth);
-    setCameraOffsetX(0); // Reset camera
+    setCameraOffsetX(0);
     setGameState('playing');
     keysPressed.current = {};
   }, [colorValues, generateProceduralLevelContent]);
@@ -269,15 +269,14 @@ export default function PixelJumperGame() {
         vy += GRAVITY;
         y += vy;
 
-        // Clamp player X position to level bounds
         if (x < 0) x = 0;
         if (x + width > levelContentWidth) x = levelContentWidth - width;
-        
-        if (y < 0) { // Hit ceiling
+
+        if (y < 0) {
             y = 0;
             vy = 0;
         }
-        if (y + height > VIEWPORT_HEIGHT) { // Fell off bottom
+        if (y + height > VIEWPORT_HEIGHT) {
             setGameState('game_over_fall');
             return prevPlayer;
         }
@@ -289,25 +288,25 @@ export default function PixelJumperGame() {
             x + width > platform.x &&
             y < platform.y + platform.height &&
             y + height > platform.y
-          ) { 
-            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) { 
+          ) {
+            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) {
               y = platform.y - height;
               vy = 0;
               isJumping = false;
               onPlatform = true;
-            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) { 
+            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) {
                 y = platform.y + platform.height;
                 vy = 0;
-            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x && y + height > platform.y && y < platform.y + platform.height) { 
+            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x && y + height > platform.y && y < platform.y + platform.height) {
                 x = platform.x - width;
                 vx = 0;
-            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width && y + height > platform.y && y < platform.y + platform.height) { 
+            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width && y + height > platform.y && y < platform.y + platform.height) {
                 x = platform.x + platform.width;
                 vx = 0;
             }
           }
         });
-        
+
         setCurrentFoodItems(prevFoodItems =>
           prevFoodItems.map(food => {
             if (
@@ -332,7 +331,7 @@ export default function PixelJumperGame() {
                 y + height > enemy.y
             ) {
                 setGameState('game_over_enemy');
-                return prevPlayer; 
+                return prevPlayer;
             }
         }
 
@@ -344,10 +343,10 @@ export default function PixelJumperGame() {
                 y + height > trap.y
             ) {
                 setGameState('game_over_trap');
-                return prevPlayer; 
+                return prevPlayer;
             }
         }
-        
+
         if (currentGoal &&
             x < currentGoal.x + currentGoal.width &&
             x + width > currentGoal.x &&
@@ -357,9 +356,9 @@ export default function PixelJumperGame() {
             const levelData = staticPixelJumperLevelsConfig[currentLevelIndex];
             savePixelJumperLevelHighScore(levelData.id, score);
             if (score > levelHighScore) setLevelHighScore(score);
-            
+
             const nextLevel = currentLevelIndex + 1;
-            savePixelJumperMaxUnlockedLevel(nextLevel +1); 
+            savePixelJumperMaxUnlockedLevel(nextLevel +1);
             setMaxUnlockedLevel(getPixelJumperMaxUnlockedLevel());
 
             setGameState('level_complete');
@@ -370,12 +369,11 @@ export default function PixelJumperGame() {
       });
 
       // Update Enemies
-      setCurrentEnemies(prevEnemies => 
+      setCurrentEnemies(prevEnemies =>
         prevEnemies.map(enemy => {
             let newX = enemy.x + enemy.vx;
             let newVx = enemy.vx;
 
-            // Check platform boundaries for patrol for more robust enemy movement
             let enemyOnValidPlatform = false;
             let currentPlatformWidth = 0;
             let currentPlatformX = 0;
@@ -388,40 +386,38 @@ export default function PixelJumperGame() {
                     break;
                 }
             }
-            
-            // Adjust patrol based on platform if found, otherwise use original patrol logic
+
             const minPatrolX = enemyOnValidPlatform ? currentPlatformX : enemy.originalX - enemy.patrolRange;
             const maxPatrolX = enemyOnValidPlatform ? currentPlatformX + currentPlatformWidth - enemy.width : enemy.originalX + enemy.patrolRange;
 
             if (newX <= minPatrolX || newX >= maxPatrolX) {
-                newVx = -enemy.vx; 
-                newX = enemy.x + newVx; 
+                newVx = -enemy.vx;
+                newX = enemy.x + newVx;
             }
-            
+
             return {...enemy, x: newX, vx: newVx};
         })
       );
 
       // Update Camera
       if (player) {
-        const targetCameraX = player.x - VIEWPORT_WIDTH / 2.8; // Keep player slightly left of center
+        const targetCameraX = player.x - VIEWPORT_WIDTH / 2.8;
         const clampedCameraX = Math.max(0, Math.min(targetCameraX, levelContentWidth - VIEWPORT_WIDTH));
         setCameraOffsetX(clampedCameraX);
       }
 
-    }, 1000 / 60); 
+    }, 1000 / 60);
 
     return () => clearInterval(gameLoop);
   }, [gameState, player, currentPlatforms, currentGoal, score, levelHighScore, currentLevelIndex, loadLevel, currentEnemies, currentTraps, levelContentWidth]);
 
 
-  useEffect(() => { 
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear viewport with background color
     ctx.fillStyle = `hsl(${colorValues.background})`;
     ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
@@ -429,9 +425,8 @@ export default function PixelJumperGame() {
 
     if (activeGameRenderStates.includes(gameState)) {
         ctx.save();
-        ctx.translate(-cameraOffsetX, 0); // Apply camera offset
+        ctx.translate(-cameraOffsetX, 0);
 
-        // Draw World Elements (affected by camera)
         currentPlatforms.forEach(platform => {
             ctx.fillStyle = platform.color || `hsl(${colorValues.muted})`;
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
@@ -468,10 +463,9 @@ export default function PixelJumperGame() {
             ctx.fillStyle = player.color || `hsl(${colorValues.primary})`;
             ctx.fillRect(player.x, player.y, player.width, player.height);
         }
-        
-        ctx.restore(); // Restore context before drawing HUD
 
-        // Draw HUD Elements (fixed on viewport)
+        ctx.restore();
+
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.font = '18px "Space Grotesk", sans-serif';
         ctx.textAlign = 'left';
@@ -481,10 +475,9 @@ export default function PixelJumperGame() {
         ctx.textAlign = 'right';
         ctx.fillText(`High Score: ${levelHighScore}`, VIEWPORT_WIDTH - 10, 25);
     }
-    
-    // Draw Overlays (game_complete, game_over etc.) - these cover the viewport
+
     if (gameState === 'level_complete') {
-        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`; 
+        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`;
         ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
@@ -512,7 +505,7 @@ export default function PixelJumperGame() {
          ctx.fillText(`Final Score: ${score}`, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2 + 30);
     }
      if (gameState === 'all_levels_complete') {
-        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`; 
+        ctx.fillStyle = `hsla(${colorValues.primary}, 0.8)`;
         ctx.fillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.textAlign = 'center';
@@ -535,7 +528,7 @@ export default function PixelJumperGame() {
       loadLevel(levelIndex);
     }
   };
-  
+
   const handleNextLevel = () => {
     const nextLevelIdx = currentLevelIndex + 1;
     if (nextLevelIdx < staticPixelJumperLevelsConfig.length) {
@@ -584,9 +577,9 @@ export default function PixelJumperGame() {
               </SelectTrigger>
               <SelectContent>
                 {staticPixelJumperLevelsConfig.map(level => (
-                  <SelectItem 
-                    key={level.id} 
-                    value={level.id.toString()} 
+                  <SelectItem
+                    key={level.id}
+                    value={level.id.toString()}
                     disabled={level.id > maxUnlockedLevel}
                   >
                     {level.name} {level.id > maxUnlockedLevel ? "(Locked)" : `(High Score: ${getPixelJumperLevelHighScore(level.id)})`}
@@ -605,7 +598,7 @@ export default function PixelJumperGame() {
 
   return (
     <div className="flex flex-col items-center gap-6 p-4 md:p-8">
-      <Card className="w-full max-w-[800px] bg-card/90 shadow-xl overflow-hidden"> {/* Max width to viewport width */}
+      <Card className="w-full max-w-[800px] bg-card/90 shadow-xl overflow-hidden">
         <CardHeader className="text-center pb-2">
             <CardTitle className="text-3xl font-headline text-primary">
               Pixel Jumper - {currentLevelConfigData?.name || `Generated ${currentLevelIndex + 1}`}
@@ -615,11 +608,11 @@ export default function PixelJumperGame() {
             <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background">
                 <canvas
                 ref={canvasRef}
-                width={VIEWPORT_WIDTH} // Use viewport width for canvas element
-                height={VIEWPORT_HEIGHT} // Use viewport height for canvas element
+                width={VIEWPORT_WIDTH}
+                height={VIEWPORT_HEIGHT}
                 aria-label="Pixel Jumper game board"
                 role="img"
-                tabIndex={0} 
+                tabIndex={0}
                 />
             </div>
           {(gameState === 'level_complete' || gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap' || gameState === 'all_levels_complete') && (
@@ -664,5 +657,3 @@ export default function PixelJumperGame() {
     </div>
   );
 }
-
-    
