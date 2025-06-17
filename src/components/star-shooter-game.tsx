@@ -13,32 +13,35 @@ const LOGIC_CANVAS_WIDTH = 400;
 const LOGIC_CANVAS_HEIGHT = 600;
 
 const PLAYER_WIDTH = 40;
-const PLAYER_HEIGHT = 30; // Height is more for the base of the triangle
+const PLAYER_HEIGHT = 30; 
 const PLAYER_SPEED = 7;
 const BULLET_WIDTH = 5;
 const BULLET_HEIGHT = 15;
 const BULLET_SPEED = 10;
 const ENEMY_WIDTH = 35;
 const ENEMY_HEIGHT = 30;
-const ENEMY_BASE_SPEED = 1.5; // Slightly reduced base speed
-const ENEMY_SPAWN_INTERVAL = 1200; // milliseconds, slightly faster spawn
-const MAX_ENEMIES = 12; // Allow a few more enemies
+const ENEMY_BASE_SPEED = 1.5; 
+const ENEMY_SPAWN_INTERVAL = 1200; 
+const MAX_ENEMIES = 12; 
 const STAR_COUNT = 100;
-const PLAYER_SHOOT_INTERVAL = 300; // milliseconds, player shoots every 0.3s
+const PLAYER_SHOOT_INTERVAL = 300; 
 
 type GameState = 'menu' | 'playing' | 'game_over';
 
 export default function StarShooterGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameState, setGameState] = useState<GameState>('menu');
-  const [player, setPlayer] = useState<StarShooterPlayer | null>(null);
+  const [player, setPlayer] = useState<StarShooterPlayer | null>(null); // For React rendering
+  const playerRef = useRef<StarShooterPlayer | null>(null); // For game loop logic
+
   const [bullets, setBullets] = useState<Bullet[]>([]);
   const [enemies, setEnemies] = useState<EnemyShip[]>([]);
   const [stars, setStars] = useState<Star[]>([]);
   const [score, setScore] = useState(0);
   const [highScore, setHighScoreState] = useState(0);
+  
   const lastEnemySpawnTime = useRef(0);
-  const lastPlayerShotTime = useRef(0);
+  const lastPlayerShotTime = useRef(Date.now()); // Initialize to avoid immediate shot
   const isMobile = useIsMobile();
 
   const [actualCanvasSize, setActualCanvasSize] = useState({ width: LOGIC_CANVAS_WIDTH, height: LOGIC_CANVAS_HEIGHT });
@@ -50,9 +53,9 @@ export default function StarShooterGame() {
     accent: '197 84% 54%',
     destructive: '0 72% 51%',
     card: '220 11% 20%',
-    enemyColor1: '30 100% 50%', // Orange
-    enemyColor2: '60 100% 50%', // Yellow
-    starColor: '0 0% 70%', // Light gray for stars
+    enemyColor1: '30 100% 50%', 
+    enemyColor2: '60 100% 50%', 
+    starColor: '0 0% 70%', 
   });
 
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -114,21 +117,24 @@ export default function StarShooterGame() {
   }, [colorValues.starColor]);
 
   const startGame = useCallback(() => {
-    setPlayer({
+    const initialPlayer: StarShooterPlayer = {
       x: LOGIC_CANVAS_WIDTH / 2 - PLAYER_WIDTH / 2,
       y: LOGIC_CANVAS_HEIGHT - PLAYER_HEIGHT - 20,
       width: PLAYER_WIDTH,
       height: PLAYER_HEIGHT,
       speed: PLAYER_SPEED,
       color: `hsl(${colorValues.primary})`,
-    });
+    };
+    setPlayer(initialPlayer);
+    playerRef.current = initialPlayer;
+
     setBullets([]);
     setEnemies([]);
     initStars();
     setScore(0);
     setHighScoreState(getHighScore('starshooter_highscore'));
     lastEnemySpawnTime.current = Date.now();
-    lastPlayerShotTime.current = Date.now(); // Initialize shot time
+    lastPlayerShotTime.current = Date.now(); 
     setGameState('playing');
     keysPressed.current = {};
     canvasRef.current?.focus();
@@ -171,139 +177,164 @@ export default function StarShooterGame() {
     keysPressed.current['mobile_right'] = direction === 'right';
   };
 
-  // Mobile shoot button is now decorative / less functional due to auto-shoot
-  const handleMobileShoot = () => {
-    // Player shoots automatically, this button can be removed or repurposed
-  };
-
-
   useEffect(() => {
-    if (gameState !== 'playing' || !player) return;
+    if (gameState !== 'playing') {
+      return;
+    }
+    
+    // Sync playerRef with player state if it exists (e.g., after startGame)
+    // This ensures playerRef is up-to-date if the effect re-runs.
+    if (player && playerRef.current !== player) {
+        playerRef.current = player;
+    }
 
     const gameLoop = setInterval(() => {
       const currentTime = Date.now();
+      const currentPlayerLogic = playerRef.current;
 
-      // Player movement
-      setPlayer(prevPlayer => {
-        if (!prevPlayer) return null;
-        let { x } = prevPlayer;
+      // Player Movement
+      if (currentPlayerLogic) {
+        let newX = currentPlayerLogic.x;
         if (keysPressed.current['arrowleft'] || keysPressed.current['a'] || keysPressed.current['mobile_left']) {
-          x -= prevPlayer.speed;
+          newX -= currentPlayerLogic.speed;
         }
         if (keysPressed.current['arrowright'] || keysPressed.current['d'] || keysPressed.current['mobile_right']) {
-          x += prevPlayer.speed;
+          newX += currentPlayerLogic.speed;
         }
-        x = Math.max(0, Math.min(x, LOGIC_CANVAS_WIDTH - prevPlayer.width));
-        return { ...prevPlayer, x };
-      });
+        newX = Math.max(0, Math.min(newX, LOGIC_CANVAS_WIDTH - currentPlayerLogic.width));
 
+        if (newX !== currentPlayerLogic.x) {
+          playerRef.current = { ...currentPlayerLogic, x: newX };
+          setPlayer(pState => pState ? { ...pState, x: newX } : null); 
+        }
+      }
+      
       // Automatic Player Shooting
-      if (currentTime - lastPlayerShotTime.current > PLAYER_SHOOT_INTERVAL) {
-        setPlayer(currentPlayer => { // Use functional update to ensure we have the latest player state
-            if (currentPlayer) {
-                 setBullets(prevBullets => [
-                    ...prevBullets,
-                    {
-                        x: currentPlayer.x + currentPlayer.width / 2 - BULLET_WIDTH / 2,
-                        y: currentPlayer.y,
-                        width: BULLET_WIDTH,
-                        height: BULLET_HEIGHT,
-                        speed: BULLET_SPEED,
-                        color: `hsl(${colorValues.accent})`,
-                    },
-                    ]);
-            }
-            return currentPlayer;
-        });
+      if (playerRef.current && (currentTime - lastPlayerShotTime.current > PLAYER_SHOOT_INTERVAL)) {
+        const p = playerRef.current;
+        setBullets(prevBullets => [
+          ...prevBullets,
+          {
+            x: p.x + p.width / 2 - BULLET_WIDTH / 2,
+            y: p.y,
+            width: BULLET_WIDTH,
+            height: BULLET_HEIGHT,
+            speed: BULLET_SPEED,
+            color: `hsl(${colorValues.accent})`,
+          },
+        ]);
         lastPlayerShotTime.current = currentTime;
       }
 
-      // Update bullets
-      setBullets(prevBullets =>
-        prevBullets
-          .map(b => ({ ...b, y: b.y - b.speed }))
-          .filter(b => b.y + b.height > 0) // Remove bullets that go off-screen (top)
-      );
+      // Update bullets, enemies, and handle collisions
+      setBullets(prevAllBullets => {
+        let stillExistingBullets = prevAllBullets
+          .map(b => ({ ...b, y: b.y - b.speed })) 
+          .filter(b => b.y + b.height > 0); 
 
-      // Spawn enemies
-      if (currentTime - lastEnemySpawnTime.current > ENEMY_SPAWN_INTERVAL && enemies.length < MAX_ENEMIES) {
-        const difficultyFactor = 1 + Math.min(score / 500, 2.5); // Increase speed up to 3.5x base
-        setEnemies(prevEnemies => [
-          ...prevEnemies,
-          {
-            x: Math.random() * (LOGIC_CANVAS_WIDTH - ENEMY_WIDTH),
-            y: -ENEMY_HEIGHT,
-            width: ENEMY_WIDTH,
-            height: ENEMY_HEIGHT,
-            speed: (ENEMY_BASE_SPEED + Math.random() * 1.0) * difficultyFactor,
-            color: Math.random() > 0.5 ? `hsl(${colorValues.enemyColor1})` : `hsl(${colorValues.enemyColor2})`,
-          },
-        ]);
+        setEnemies(prevAllEnemies => {
+          let scoreGainedThisTick = 0;
+          let playerHitThisTick = false;
+
+          const enemiesAfterCollisions = prevAllEnemies.reduce((acc: EnemyShip[], enemy) => {
+            let currentEnemy = { ...enemy, y: enemy.y + enemy.speed }; 
+            let enemyWasHitByBullet = false;
+
+            const bulletsThatDidNotHitThisEnemy: Bullet[] = [];
+            for (const bullet of stillExistingBullets) {
+              if (
+                bullet.x < currentEnemy.x + currentEnemy.width &&
+                bullet.x + bullet.width > currentEnemy.x &&
+                bullet.y < currentEnemy.y + currentEnemy.height &&
+                bullet.y + bullet.height > currentEnemy.y
+              ) {
+                enemyWasHitByBullet = true;
+                scoreGainedThisTick += 10;
+              } else {
+                bulletsThatDidNotHitThisEnemy.push(bullet);
+              }
+            }
+            stillExistingBullets = bulletsThatDidNotHitThisEnemy; 
+
+            if (enemyWasHitByBullet) {
+              return acc; 
+            }
+            
+            const pLogic = playerRef.current;
+            if (pLogic &&
+              pLogic.x < currentEnemy.x + currentEnemy.width &&
+              pLogic.x + pLogic.width > currentEnemy.x &&
+              pLogic.y < currentEnemy.y + currentEnemy.height &&
+              pLogic.y + pLogic.height > currentEnemy.y 
+            ) {
+              playerHitThisTick = true;
+            }
+
+            if (currentEnemy.y < LOGIC_CANVAS_HEIGHT) {
+              acc.push(currentEnemy); 
+            }
+            return acc;
+          }, [] as EnemyShip[]);
+
+          if (scoreGainedThisTick > 0) {
+            setScore(s => s + scoreGainedThisTick);
+          }
+
+          if (playerHitThisTick && gameState === 'playing') { // gameState check to prevent multiple triggers
+            setScore(currentScoreVal => {
+                setHighScoreState(currentHighScoreVal => {
+                    if (currentScoreVal > currentHighScoreVal) {
+                        saveHighScore('starshooter_highscore', currentScoreVal);
+                        return currentScoreVal;
+                    }
+                    return currentHighScoreVal;
+                });
+                return currentScoreVal;
+            });
+            setGameState('game_over');
+          }
+          return enemiesAfterCollisions;
+        });
+        return stillExistingBullets; 
+      });
+      
+      // Spawn new enemies
+      if (currentTime - lastEnemySpawnTime.current > ENEMY_SPAWN_INTERVAL) {
+        setEnemies(prevEnemies => {
+          if (prevEnemies.length < MAX_ENEMIES) {
+            // Read score directly from state for difficulty factor, functional update for score ensures it is up-to-date
+            const difficultyFactor = 1 + Math.min(score / 500, 2.5); 
+            return [
+              ...prevEnemies,
+              {
+                x: Math.random() * (LOGIC_CANVAS_WIDTH - ENEMY_WIDTH),
+                y: -ENEMY_HEIGHT,
+                width: ENEMY_WIDTH,
+                height: ENEMY_HEIGHT,
+                speed: (ENEMY_BASE_SPEED + Math.random() * 1.0) * difficultyFactor,
+                color: Math.random() > 0.5 ? `hsl(${colorValues.enemyColor1})` : `hsl(${colorValues.enemyColor2})`,
+              },
+            ];
+          }
+          return prevEnemies;
+        });
         lastEnemySpawnTime.current = currentTime;
       }
-
-      // Update enemies & collision detection
-      setEnemies(prevEnemies => {
-        let currentBullets = [...bullets]; // Operate on a copy of bullets for this frame
-        const remainingEnemies: EnemyShip[] = [];
-
-        for (const enemy of prevEnemies) {
-          let enemyHit = false;
-          // Check collision with bullets
-          currentBullets = currentBullets.filter(bullet => {
-            if (
-              bullet.x < enemy.x + enemy.width &&
-              bullet.x + bullet.width > enemy.x &&
-              bullet.y < enemy.y + enemy.height &&
-              bullet.y + bullet.height > enemy.y
-            ) {
-              enemyHit = true;
-              setScore(s => s + 10);
-              return false; // Bullet is consumed
-            }
-            return true; // Bullet remains
-          });
-
-          if (enemyHit) continue; // Enemy destroyed, skip further processing for it
-
-          const updatedEnemy = { ...enemy, y: enemy.y + enemy.speed };
-
-          // Player collision with enemy
-          if (player &&
-            player.x < updatedEnemy.x + updatedEnemy.width &&
-            player.x + player.width > updatedEnemy.x &&
-            player.y < updatedEnemy.y + updatedEnemy.height && // Using player's visual top (y)
-            player.y + player.height > updatedEnemy.y // Using player's visual bottom
-          ) {
-            if (score > highScore) { saveHighScore('starshooter_highscore', score); setHighScoreState(score); }
-            setGameState('game_over');
-            return prevEnemies; // Stop processing further enemies if game over
-          }
-          
-          // Add enemy to next frame if it's still on screen
-          if (updatedEnemy.y < LOGIC_CANVAS_HEIGHT) {
-            remainingEnemies.push(updatedEnemy);
-          }
-        }
-        setBullets(currentBullets); // Update main bullets state with consumed bullets removed
-        return remainingEnemies;
-      });
       
       // Update stars
       setStars(prevStars => prevStars.map(star => {
           let newY = star.y + star.speed;
           if (newY > LOGIC_CANVAS_HEIGHT) {
-              newY = 0; // Reset star to top
+              newY = 0; 
               star.x = Math.random() * LOGIC_CANVAS_WIDTH;
           }
           return {...star, y: newY};
       }));
 
-    }, 1000 / 60); // ~60 FPS
+    }, 1000 / 60); 
 
     return () => clearInterval(gameLoop);
-  }, [gameState, player, bullets, enemies, score, highScore, colorValues, initStars]); // Added bullets and enemies to dependency array
-
+  }, [gameState, colorValues, initStars, score, saveHighScore]); // Added score and saveHighScore as they are read in the loop
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -329,13 +360,13 @@ export default function StarShooterGame() {
     });
     
     if (gameState !== 'menu') {
-      if (player) {
-        ctx.fillStyle = player.color || `hsl(${colorValues.primary})`;
-        // Draw player as a triangle
+      const playerToDraw = playerRef.current || player; // Prefer ref for current position if available
+      if (playerToDraw) {
+        ctx.fillStyle = playerToDraw.color || `hsl(${colorValues.primary})`;
         ctx.beginPath();
-        ctx.moveTo(player.x + player.width / 2, player.y); // Top point
-        ctx.lineTo(player.x, player.y + player.height); // Bottom-left point
-        ctx.lineTo(player.x + player.width, player.y + player.height); // Bottom-right point
+        ctx.moveTo(playerToDraw.x + playerToDraw.width / 2, playerToDraw.y); 
+        ctx.lineTo(playerToDraw.x, playerToDraw.y + playerToDraw.height); 
+        ctx.lineTo(playerToDraw.x + playerToDraw.width, playerToDraw.y + playerToDraw.height); 
         ctx.closePath();
         ctx.fill();
       }
@@ -359,12 +390,12 @@ export default function StarShooterGame() {
     }
 
     if (gameState === 'game_over') {
-      ctx.fillStyle = `hsla(${colorValues.card}, 0.9)`; // Overlay background
-      ctx.fillRect(LOGIC_CANVAS_WIDTH / 4, LOGIC_CANVAS_HEIGHT / 2 - 60, LOGIC_CANVAS_WIDTH / 2, 120); // Centered box
+      ctx.fillStyle = `hsla(${colorValues.card}, 0.9)`; 
+      ctx.fillRect(LOGIC_CANVAS_WIDTH / 4, LOGIC_CANVAS_HEIGHT / 2 - 60, LOGIC_CANVAS_WIDTH / 2, 120); 
       
       ctx.fillStyle = `hsl(${colorValues.foreground})`;
       ctx.textAlign = 'center';
-      ctx.font = 'bold 28px "Space Grotesk", sans-serif'; // Slightly smaller for the box
+      ctx.font = 'bold 28px "Space Grotesk", sans-serif'; 
       ctx.fillText('Game Over!', LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 - 20);
       ctx.font = '18px "Space Grotesk", sans-serif';
       ctx.fillText(`Final Score: ${score}`, LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 + 10);
@@ -459,7 +490,6 @@ export default function StarShooterGame() {
               <MoveRight size={32} />
             </Button>
           </div>
-          {/* Removed shoot button as shooting is automatic */}
           <div className="aspect-square h-20 w-20 rounded-full flex items-center justify-center bg-card/30" aria-hidden="true">
             <Pointer size={40} className="text-muted-foreground opacity-50" />
           </div>
@@ -480,5 +510,3 @@ export default function StarShooterGame() {
     </div>
   );
 }
-
-    
