@@ -29,10 +29,10 @@ export default function SnakeGame() {
   const [highScore, setHighScoreState] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameSpeed, setGameSpeed] = useState(150); // Milliseconds
+  const [gameSpeed, setGameSpeed] = useState(150); 
 
   const [colorValues, setColorValues] = useState({
-    card: '220 11% 20%', // Default HSL components
+    card: '220 11% 20%', 
     border: '220 11% 30%',
     accent: '197 84% 54%',
     accentForeground: '0 0% 98%',
@@ -44,7 +44,6 @@ export default function SnakeGame() {
   });
 
   useEffect(() => {
-    // Fetch actual CSS variable values once the component is mounted
     if (typeof window !== 'undefined' && document.documentElement) {
       const computedStyle = getComputedStyle(document.documentElement);
       setColorValues({
@@ -73,13 +72,22 @@ export default function SnakeGame() {
     setGameOver(false);
     setGameStarted(true);
     setGameSpeed(150);
+    canvasRef.current?.focus(); 
   }, []);
 
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        resetGame(); // Reset game on Escape press
+        return;
+      }
+
       switch (e.key) {
         case 'ArrowUp':
           if (direction !== 'DOWN') setDirection('UP');
@@ -98,7 +106,7 @@ export default function SnakeGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [direction, gameOver, gameStarted]);
+  }, [direction, gameOver, gameStarted, resetGame]);
 
   useEffect(() => {
     if (!gameStarted || gameOver) return;
@@ -234,6 +242,7 @@ export default function SnakeGame() {
               height={CANVAS_HEIGHT}
               aria-label="Snake game board"
               role="img"
+              tabIndex={0} 
             />
           </div>
           {!gameStarted || gameOver ? (
@@ -241,7 +250,7 @@ export default function SnakeGame() {
               <RefreshCcw className="mr-2 h-5 w-5" /> {gameOver ? 'Play Again' : 'Start Game'}
             </Button>
           ) : (
-             <p className="text-muted-foreground text-sm">Use arrow keys to control the snake.</p>
+             <p className="text-muted-foreground text-sm">Use arrow keys. Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset.</p>
           )}
         </CardContent>
       </Card>
@@ -252,8 +261,11 @@ export default function SnakeGame() {
           <li>Eat the <span className="text-accent font-semibold">blue food</span> to grow and score points.</li>
           <li>Avoid hitting the walls or your own tail.</li>
           <li>The game speeds up as you eat more food!</li>
+          <li>Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset the game.</li>
         </ul>
       </div>
     </div>
   );
 }
+
+    

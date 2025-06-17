@@ -44,7 +44,7 @@ export default function PixelJumperGame() {
   const [levelHighScore, setLevelHighScore] = useState(0);
   const [maxUnlockedLevel, setMaxUnlockedLevel] = useState(1);
   const [colorValues, setColorValues] = useState({
-    background: '220 11% 15%', // Default HSL components
+    background: '220 11% 15%',
     foreground: '0 0% 98%',
     primary: '286 82% 54%',
     accent: '197 84% 54%',
@@ -102,13 +102,28 @@ export default function PixelJumperGame() {
   }, [currentLevelIndex, loadLevel]);
 
   useEffect(() => {
+    const gameActiveStates: GameState[] = ['playing', 'level_complete', 'game_over_fall', 'all_levels_complete'];
     const handleKeyDown = (e: KeyboardEvent) => {
-      keysPressed.current[e.key] = true;
-      if (e.key === ' ' && player && !player.isJumping && gameState === 'playing') {
-        setPlayer(p => p ? { ...p, vy: JUMP_FORCE, isJumping: true } : null);
+      if (gameState === 'playing') {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'a', 'd', 'w', 's'].includes(e.key)) {
+          e.preventDefault();
+        }
+        keysPressed.current[e.key] = true;
+        if (e.key === ' ' && player && !player.isJumping) {
+          setPlayer(p => p ? { ...p, vy: JUMP_FORCE, isJumping: true } : null);
+        }
+      }
+      if (e.key === 'Escape' && gameActiveStates.includes(gameState)) {
+        e.preventDefault();
+        setGameState('menu');
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (gameState === 'playing') {
+         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'a', 'd', 'w', 's'].includes(e.key)) {
+          e.preventDefault();
+        }
+      }
       keysPressed.current[e.key] = false;
     };
 
@@ -128,7 +143,6 @@ export default function PixelJumperGame() {
         if (!prevPlayer) return null;
         let { x, y, vx, vy, isJumping, width, height } = prevPlayer;
 
-        // Horizontal movement
         vx = 0;
         if (keysPressed.current['ArrowLeft'] || keysPressed.current['a']) {
           vx = -PLAYER_SPEED;
@@ -138,20 +152,16 @@ export default function PixelJumperGame() {
         }
         x += vx;
 
-        // Apply gravity
         vy += GRAVITY;
         y += vy;
 
-        // Boundary checks (simple for now)
         if (x < 0) x = 0;
         if (x + width > CANVAS_WIDTH) x = CANVAS_WIDTH - width;
-        if (y + height > CANVAS_HEIGHT) { // Fell off bottom
+        if (y + height > CANVAS_HEIGHT) {
             setGameState('game_over_fall');
-            return prevPlayer; // Stop further updates for this frame
+            return prevPlayer;
         }
 
-
-        // Platform collision
         let onPlatform = false;
         currentPlatforms.forEach(platform => {
           if (
@@ -160,30 +170,24 @@ export default function PixelJumperGame() {
             y < platform.y + platform.height &&
             y + height > platform.y
           ) {
-            // Collision detected
-            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) { // Landing on top
+            if (vy > 0 && prevPlayer.y + prevPlayer.height <= platform.y) {
               y = platform.y - height;
               vy = 0;
               isJumping = false;
               onPlatform = true;
-            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) { // Hitting bottom of platform
+            } else if (vy < 0 && prevPlayer.y >= platform.y + platform.height) {
                 y = platform.y + platform.height;
                 vy = 0;
-            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x) { // Hitting left side of platform
+            } else if (vx > 0 && prevPlayer.x + prevPlayer.width <= platform.x) {
                 x = platform.x - width;
                 vx = 0;
-            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width) { // Hitting right side of platform
+            } else if (vx < 0 && prevPlayer.x >= platform.x + platform.width) {
                 x = platform.x + platform.width;
                 vx = 0;
             }
           }
         });
-        if (!onPlatform && y + height < CANVAS_HEIGHT) { // Check if not on a platform and not on ground (if ground existed)
-            // isJumping = true; // No, this makes continuous jumping
-        }
-
-
-        // Food collection
+        
         setCurrentFoodItems(prevFoodItems =>
           prevFoodItems.map(food => {
             if (
@@ -200,7 +204,6 @@ export default function PixelJumperGame() {
           })
         );
         
-        // Goal collision
         if (currentGoal &&
             x < currentGoal.x + currentGoal.width &&
             x + width > currentGoal.x &&
@@ -212,33 +215,31 @@ export default function PixelJumperGame() {
             if (score > levelHighScore) setLevelHighScore(score);
             
             const nextLevel = currentLevelIndex + 1;
-            savePixelJumperMaxUnlockedLevel(nextLevel +1); // +1 because levels are 0-indexed, display is 1-indexed
+            savePixelJumperMaxUnlockedLevel(nextLevel +1);
             setMaxUnlockedLevel(getPixelJumperMaxUnlockedLevel());
 
             setGameState('level_complete');
-            return prevPlayer; // Stop player updates
+            return prevPlayer;
         }
-
 
         return { ...prevPlayer, x, y, vx, vy, isJumping };
       });
-    }, 1000 / 60); // Approx 60 FPS
+    }, 1000 / 60); 
 
     return () => clearInterval(gameLoop);
-  }, [gameState, player, currentPlatforms, currentGoal, score, levelHighScore, currentLevelIndex]);
+  }, [gameState, player, currentPlatforms, currentGoal, score, levelHighScore, currentLevelIndex, loadLevel]);
 
 
-  useEffect(() => { // Drawing effect
+  useEffect(() => { 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
     ctx.fillStyle = `hsl(${colorValues.background})`;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    if (gameState === 'playing' || gameState === 'level_complete' || gameState === 'game_over_fall') {
+    if (gameState === 'playing' || gameState === 'level_complete' || gameState === 'game_over_fall' || gameState === 'all_levels_complete') {
         currentPlatforms.forEach(platform => {
             ctx.fillStyle = platform.color || `hsl(${colorValues.muted})`;
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
@@ -261,7 +262,6 @@ export default function PixelJumperGame() {
             ctx.fillRect(player.x, player.y, player.width, player.height);
         }
         
-        // Draw score and level info
         ctx.fillStyle = `hsl(${colorValues.foreground})`;
         ctx.font = '18px "Space Grotesk", sans-serif';
         ctx.textAlign = 'left';
@@ -296,7 +296,6 @@ export default function PixelJumperGame() {
         ctx.font = '20px "Space Grotesk", sans-serif';
         ctx.fillText('You have completed all levels!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
     }
-
 
   }, [gameState, player, currentPlatforms, currentFoodItems, currentGoal, score, levelHighScore, currentLevelIndex, colorValues]);
 
@@ -391,6 +390,7 @@ export default function PixelJumperGame() {
                 height={CANVAS_HEIGHT}
                 aria-label="Pixel Jumper game board"
                 role="img"
+                tabIndex={0} 
                 />
             </div>
           {(gameState === 'level_complete' || gameState === 'game_over_fall' || gameState === 'all_levels_complete') && (
@@ -416,7 +416,7 @@ export default function PixelJumperGame() {
             </div>
           )}
            {gameState === 'playing' && (
-             <p className="text-muted-foreground text-sm">Use <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move, <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd> to jump.</p>
+             <p className="text-muted-foreground text-sm">Use <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move, <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd> to jump. Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> for menu.</p>
            )}
         </CardContent>
       </Card>
@@ -428,9 +428,11 @@ export default function PixelJumperGame() {
           <li>Collect all <span className="text-accent font-semibold">blue items</span>.</li>
           <li>Reach the <span className="text-primary font-semibold">purple goal</span> to complete the level.</li>
           <li>Avoid falling off the screen!</li>
+          <li>Press <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to return to the main menu.</li>
         </ul>
       </div>
     </div>
   );
 }
 
+    
