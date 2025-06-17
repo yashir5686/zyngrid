@@ -13,21 +13,20 @@ const LOGIC_CANVAS_WIDTH = 400;
 const LOGIC_CANVAS_HEIGHT = 600;
 
 const PLAYER_WIDTH = 40;
-const PLAYER_HEIGHT = 30;
+const PLAYER_HEIGHT = 30; // Height is more for the base of the triangle
 const PLAYER_SPEED = 7;
 const BULLET_WIDTH = 5;
 const BULLET_HEIGHT = 15;
 const BULLET_SPEED = 10;
 const ENEMY_WIDTH = 35;
 const ENEMY_HEIGHT = 30;
-const ENEMY_BASE_SPEED = 2;
-const ENEMY_SPAWN_INTERVAL = 1500; // milliseconds
-const MAX_ENEMIES = 10;
+const ENEMY_BASE_SPEED = 1.5; // Slightly reduced base speed
+const ENEMY_SPAWN_INTERVAL = 1200; // milliseconds, slightly faster spawn
+const MAX_ENEMIES = 12; // Allow a few more enemies
 const STAR_COUNT = 100;
+const PLAYER_SHOOT_INTERVAL = 300; // milliseconds, player shoots every 0.3s
 
 type GameState = 'menu' | 'playing' | 'game_over';
-
-const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 export default function StarShooterGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,6 +38,7 @@ export default function StarShooterGame() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScoreState] = useState(0);
   const lastEnemySpawnTime = useRef(0);
+  const lastPlayerShotTime = useRef(0);
   const isMobile = useIsMobile();
 
   const [actualCanvasSize, setActualCanvasSize] = useState({ width: LOGIC_CANVAS_WIDTH, height: LOGIC_CANVAS_HEIGHT });
@@ -77,9 +77,8 @@ export default function StarShooterGame() {
     if (typeof window !== 'undefined') {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
-
-      // Maintain aspect ratio, fit within screen bounds
       const aspectRatio = LOGIC_CANVAS_WIDTH / LOGIC_CANVAS_HEIGHT;
+      
       let newCanvasWidth = screenWidth - (isMobile ? 32 : 64);
       let newCanvasHeight = newCanvasWidth / aspectRatio;
 
@@ -89,7 +88,7 @@ export default function StarShooterGame() {
       }
       newCanvasWidth = Math.min(newCanvasWidth, LOGIC_CANVAS_WIDTH);
       newCanvasHeight = Math.min(newCanvasHeight, LOGIC_CANVAS_HEIGHT);
-
+      
       setActualCanvasSize({ width: Math.max(150, newCanvasWidth), height: Math.max(225, newCanvasHeight) });
     }
   }, [isMobile]);
@@ -129,37 +128,20 @@ export default function StarShooterGame() {
     setScore(0);
     setHighScoreState(getHighScore('starshooter_highscore'));
     lastEnemySpawnTime.current = Date.now();
+    lastPlayerShotTime.current = Date.now(); // Initialize shot time
     setGameState('playing');
     keysPressed.current = {};
     canvasRef.current?.focus();
   }, [colorValues, initStars]);
 
-  const shootBullet = useCallback(() => {
-    if (!player) return;
-    setBullets(prevBullets => [
-      ...prevBullets,
-      {
-        x: player.x + player.width / 2 - BULLET_WIDTH / 2,
-        y: player.y,
-        width: BULLET_WIDTH,
-        height: BULLET_HEIGHT,
-        speed: BULLET_SPEED,
-        color: `hsl(${colorValues.accent})`,
-      },
-    ]);
-  }, [player, colorValues.accent]);
-
   useEffect(() => {
     const gameActiveStates: GameState[] = ['playing', 'game_over'];
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameState === 'playing') {
-        if (['ArrowLeft', 'ArrowRight', ' ', 'a', 'd'].includes(e.key)) {
+        if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(e.key)) {
           e.preventDefault();
         }
         keysPressed.current[e.key.toLowerCase()] = true;
-        if (e.key === ' ') {
-          shootBullet();
-        }
       }
        if (e.key === 'Escape' && gameActiveStates.includes(gameState)) {
         e.preventDefault();
@@ -168,7 +150,7 @@ export default function StarShooterGame() {
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (gameState === 'playing') {
-         if (['ArrowLeft', 'ArrowRight', ' ', 'a', 'd'].includes(e.key)) {
+         if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(e.key)) {
           e.preventDefault();
         }
       }
@@ -181,7 +163,7 @@ export default function StarShooterGame() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gameState, shootBullet]);
+  }, [gameState]);
 
   const handleMobileMove = (direction: 'left' | 'right' | 'stop') => {
     if (gameState !== 'playing') return;
@@ -189,15 +171,18 @@ export default function StarShooterGame() {
     keysPressed.current['mobile_right'] = direction === 'right';
   };
 
+  // Mobile shoot button is now decorative / less functional due to auto-shoot
   const handleMobileShoot = () => {
-    if (gameState !== 'playing') return;
-    shootBullet();
+    // Player shoots automatically, this button can be removed or repurposed
   };
+
 
   useEffect(() => {
     if (gameState !== 'playing' || !player) return;
 
     const gameLoop = setInterval(() => {
+      const currentTime = Date.now();
+
       // Player movement
       setPlayer(prevPlayer => {
         if (!prevPlayer) return null;
@@ -212,16 +197,37 @@ export default function StarShooterGame() {
         return { ...prevPlayer, x };
       });
 
+      // Automatic Player Shooting
+      if (currentTime - lastPlayerShotTime.current > PLAYER_SHOOT_INTERVAL) {
+        setPlayer(currentPlayer => { // Use functional update to ensure we have the latest player state
+            if (currentPlayer) {
+                 setBullets(prevBullets => [
+                    ...prevBullets,
+                    {
+                        x: currentPlayer.x + currentPlayer.width / 2 - BULLET_WIDTH / 2,
+                        y: currentPlayer.y,
+                        width: BULLET_WIDTH,
+                        height: BULLET_HEIGHT,
+                        speed: BULLET_SPEED,
+                        color: `hsl(${colorValues.accent})`,
+                    },
+                    ]);
+            }
+            return currentPlayer;
+        });
+        lastPlayerShotTime.current = currentTime;
+      }
+
       // Update bullets
       setBullets(prevBullets =>
         prevBullets
           .map(b => ({ ...b, y: b.y - b.speed }))
-          .filter(b => b.y + b.height > 0)
+          .filter(b => b.y + b.height > 0) // Remove bullets that go off-screen (top)
       );
 
       // Spawn enemies
-      if (Date.now() - lastEnemySpawnTime.current > ENEMY_SPAWN_INTERVAL && enemies.length < MAX_ENEMIES) {
-        const difficultyFactor = 1 + Math.min(score / 500, 2); // Increase speed up to 3x base
+      if (currentTime - lastEnemySpawnTime.current > ENEMY_SPAWN_INTERVAL && enemies.length < MAX_ENEMIES) {
+        const difficultyFactor = 1 + Math.min(score / 500, 2.5); // Increase speed up to 3.5x base
         setEnemies(prevEnemies => [
           ...prevEnemies,
           {
@@ -229,21 +235,22 @@ export default function StarShooterGame() {
             y: -ENEMY_HEIGHT,
             width: ENEMY_WIDTH,
             height: ENEMY_HEIGHT,
-            speed: (ENEMY_BASE_SPEED + Math.random() * 1.5) * difficultyFactor,
+            speed: (ENEMY_BASE_SPEED + Math.random() * 1.0) * difficultyFactor,
             color: Math.random() > 0.5 ? `hsl(${colorValues.enemyColor1})` : `hsl(${colorValues.enemyColor2})`,
           },
         ]);
-        lastEnemySpawnTime.current = Date.now();
+        lastEnemySpawnTime.current = currentTime;
       }
 
       // Update enemies & collision detection
       setEnemies(prevEnemies => {
-        const newEnemies: EnemyShip[] = [];
-        let newBullets = [...bullets]; // Operate on a mutable copy of bullets for this iteration
+        let currentBullets = [...bullets]; // Operate on a copy of bullets for this frame
+        const remainingEnemies: EnemyShip[] = [];
 
         for (const enemy of prevEnemies) {
           let enemyHit = false;
-          newBullets = newBullets.filter(bullet => {
+          // Check collision with bullets
+          currentBullets = currentBullets.filter(bullet => {
             if (
               bullet.x < enemy.x + enemy.width &&
               bullet.x + bullet.width > enemy.x &&
@@ -252,12 +259,12 @@ export default function StarShooterGame() {
             ) {
               enemyHit = true;
               setScore(s => s + 10);
-              return false; // Remove bullet
+              return false; // Bullet is consumed
             }
-            return true;
+            return true; // Bullet remains
           });
 
-          if (enemyHit) continue; // Enemy destroyed
+          if (enemyHit) continue; // Enemy destroyed, skip further processing for it
 
           const updatedEnemy = { ...enemy, y: enemy.y + enemy.speed };
 
@@ -265,20 +272,21 @@ export default function StarShooterGame() {
           if (player &&
             player.x < updatedEnemy.x + updatedEnemy.width &&
             player.x + player.width > updatedEnemy.x &&
-            player.y < updatedEnemy.y + updatedEnemy.height &&
-            player.y + player.height > updatedEnemy.y
+            player.y < updatedEnemy.y + updatedEnemy.height && // Using player's visual top (y)
+            player.y + player.height > updatedEnemy.y // Using player's visual bottom
           ) {
             if (score > highScore) { saveHighScore('starshooter_highscore', score); setHighScoreState(score); }
             setGameState('game_over');
             return prevEnemies; // Stop processing further enemies if game over
           }
-
+          
+          // Add enemy to next frame if it's still on screen
           if (updatedEnemy.y < LOGIC_CANVAS_HEIGHT) {
-            newEnemies.push(updatedEnemy);
+            remainingEnemies.push(updatedEnemy);
           }
         }
-        setBullets(newBullets); // Update main bullets state after processing all enemies for this frame
-        return newEnemies;
+        setBullets(currentBullets); // Update main bullets state with consumed bullets removed
+        return remainingEnemies;
       });
       
       // Update stars
@@ -291,10 +299,10 @@ export default function StarShooterGame() {
           return {...star, y: newY};
       }));
 
-    }, 1000 / 60); // 60 FPS
+    }, 1000 / 60); // ~60 FPS
 
     return () => clearInterval(gameLoop);
-  }, [gameState, player, bullets, enemies, score, highScore, colorValues]);
+  }, [gameState, player, bullets, enemies, score, highScore, colorValues, initStars]); // Added bullets and enemies to dependency array
 
 
   useEffect(() => {
@@ -303,19 +311,16 @@ export default function StarShooterGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Scale context to logical size
     const scaleX = actualCanvasSize.width / LOGIC_CANVAS_WIDTH;
     const scaleY = actualCanvasSize.height / LOGIC_CANVAS_HEIGHT;
     
-    ctx.clearRect(0, 0, actualCanvasSize.width, actualCanvasSize.height); // Clear scaled canvas
+    ctx.clearRect(0, 0, actualCanvasSize.width, actualCanvasSize.height);
     ctx.save();
     ctx.scale(scaleX, scaleY);
-
 
     ctx.fillStyle = `hsl(${colorValues.background})`;
     ctx.fillRect(0, 0, LOGIC_CANVAS_WIDTH, LOGIC_CANVAS_HEIGHT);
 
-    // Draw Stars
     stars.forEach(star => {
       ctx.fillStyle = star.color || `hsla(${colorValues.starColor}, 0.7)`;
       ctx.beginPath();
@@ -324,32 +329,27 @@ export default function StarShooterGame() {
     });
     
     if (gameState !== 'menu') {
-      // Draw Player
       if (player) {
         ctx.fillStyle = player.color || `hsl(${colorValues.primary})`;
-        ctx.fillRect(player.x, player.y, player.width, player.height);
-         // Simple triangular ship design
+        // Draw player as a triangle
         ctx.beginPath();
-        ctx.moveTo(player.x + player.width / 2, player.y);
-        ctx.lineTo(player.x, player.y + player.height);
-        ctx.lineTo(player.x + player.width, player.y + player.height);
+        ctx.moveTo(player.x + player.width / 2, player.y); // Top point
+        ctx.lineTo(player.x, player.y + player.height); // Bottom-left point
+        ctx.lineTo(player.x + player.width, player.y + player.height); // Bottom-right point
         ctx.closePath();
         ctx.fill();
       }
 
-      // Draw Bullets
       bullets.forEach(bullet => {
         ctx.fillStyle = bullet.color || `hsl(${colorValues.accent})`;
         ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
       });
 
-      // Draw Enemies
       enemies.forEach(enemy => {
         ctx.fillStyle = enemy.color || `hsl(${colorValues.destructive})`;
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
       });
 
-      // HUD
       ctx.fillStyle = `hsl(${colorValues.foreground})`;
       ctx.font = '20px "Space Grotesk", sans-serif';
       ctx.textAlign = 'left';
@@ -359,18 +359,19 @@ export default function StarShooterGame() {
     }
 
     if (gameState === 'game_over') {
-      ctx.fillStyle = `hsla(${colorValues.card}, 0.9)`;
-      ctx.fillRect(LOGIC_CANVAS_WIDTH / 2 - 150, LOGIC_CANVAS_HEIGHT / 2 - 75, 300, 150);
+      ctx.fillStyle = `hsla(${colorValues.card}, 0.9)`; // Overlay background
+      ctx.fillRect(LOGIC_CANVAS_WIDTH / 4, LOGIC_CANVAS_HEIGHT / 2 - 60, LOGIC_CANVAS_WIDTH / 2, 120); // Centered box
       
       ctx.fillStyle = `hsl(${colorValues.foreground})`;
       ctx.textAlign = 'center';
-      ctx.font = 'bold 32px "Space Grotesk", sans-serif';
+      ctx.font = 'bold 28px "Space Grotesk", sans-serif'; // Slightly smaller for the box
       ctx.fillText('Game Over!', LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 - 20);
-      ctx.font = '20px "Space Grotesk", sans-serif';
-      ctx.fillText(`Final Score: ${score}`, LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 + 20);
+      ctx.font = '18px "Space Grotesk", sans-serif';
+      ctx.fillText(`Final Score: ${score}`, LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 + 10);
+      ctx.fillText(`High Score: ${highScore}`, LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 + 35);
     }
     
-    ctx.restore(); // Restore context after scaling
+    ctx.restore();
 
   }, [gameState, player, bullets, enemies, stars, score, highScore, colorValues, actualCanvasSize]);
 
@@ -383,7 +384,7 @@ export default function StarShooterGame() {
             <CardTitle className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2">
                 <Gamepad2 size={isMobile ? 30: 36} /> Star Shooter
             </CardTitle>
-            <CardContent className="text-muted-foreground text-sm md:text-base">Blast through endless waves of aliens!</CardContent>
+            <CardContent className="text-muted-foreground text-sm md:text-base pt-2">Blast through endless waves of aliens! Your ship fires automatically.</CardContent>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg">
@@ -426,10 +427,10 @@ export default function StarShooterGame() {
             </div>
           )}
            {gameState === 'playing' && !isMobile && (
-             <p className="text-muted-foreground text-xs md:text-sm text-center">Use <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move, <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Space</kbd> to shoot. Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> for menu.</p>
+             <p className="text-muted-foreground text-xs md:text-sm text-center">Use <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move. Ship fires automatically. Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> for menu.</p>
            )}
            {gameState === 'playing' && isMobile && (
-             <p className="text-muted-foreground text-xs text-center">Use on-screen controls. Press <kbd className="px-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> icon for menu (if available).</p>
+             <p className="text-muted-foreground text-xs text-center">Use on-screen controls to move. Ship fires automatically. Press <kbd className="px-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> icon for menu (if available).</p>
            )}
         </CardContent>
       </Card>
@@ -458,14 +459,10 @@ export default function StarShooterGame() {
               <MoveRight size={32} />
             </Button>
           </div>
-          <Button
-            variant="outline"
-            className="aspect-square h-20 w-20 rounded-full" 
-            onClick={handleMobileShoot}
-            aria-label="Shoot"
-          >
-            <Pointer size={40} />
-          </Button>
+          {/* Removed shoot button as shooting is automatic */}
+          <div className="aspect-square h-20 w-20 rounded-full flex items-center justify-center bg-card/30" aria-hidden="true">
+            <Pointer size={40} className="text-muted-foreground opacity-50" />
+          </div>
         </div>
       )}
 
@@ -473,7 +470,7 @@ export default function StarShooterGame() {
         <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play Star Shooter</h3>
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use on-screen buttons" : "Use Arrow Keys or A/D"} for left/right movement.</li>
-          <li>{isMobile ? "Tap the pointer button" : "Press Spacebar"} to shoot.</li>
+          <li>Your ship fires bullets automatically!</li>
           <li>Destroy enemy ships to score points.</li>
           <li>Avoid colliding with enemy ships.</li>
           <li>The game gets faster as your score increases!</li>
@@ -483,3 +480,5 @@ export default function StarShooterGame() {
     </div>
   );
 }
+
+    
