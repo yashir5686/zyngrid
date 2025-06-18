@@ -22,6 +22,7 @@ export interface Player extends PixelJumperEntity {
   vx: number; // velocity x
   vy: number; // velocity y
   isJumping: boolean;
+  animationFrame: number; // For running/idle animations
 }
 
 export interface Platform extends PixelJumperEntity {}
@@ -59,7 +60,7 @@ export interface Bullet extends StarShooterEntity {
 export interface EnemyShip extends StarShooterEntity {
   speed: number;
   health?: number; // Optional: for more complex enemies
-  variant: 'A' | 'B'; // To determine which SVG path to use
+  variant: 'A' | 'B';
 }
 
 export interface Star {
@@ -69,4 +70,3 @@ export interface Star {
   speed: number;
   color?: string;
 }
-

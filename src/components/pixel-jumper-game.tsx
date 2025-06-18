@@ -25,7 +25,7 @@ const ENEMY_HEIGHT = 25;
 const TRAP_SIZE = 20;
 
 const INITIAL_PLAYER_X = 50;
-const INITIAL_PLAYER_Y = GAME_LOGIC_HEIGHT - 100;
+const INITIAL_PLAYER_Y = GAME_LOGIC_HEIGHT - 100 - PLAYER_HEIGHT; // Adjusted for player height
 
 const WORLD_CHUNK_WIDTH = GAME_LOGIC_WIDTH * 1.5; 
 const WORLD_GENERATION_THRESHOLD_FACTOR = 1.2; 
@@ -56,18 +56,16 @@ export default function PixelJumperGame() {
     if (typeof window !== 'undefined') {
       return `hsl(${getComputedStyle(document.documentElement).getPropertyValue(cssVariable).trim()})`;
     }
-    // Fallback colors for server or initial render before CSS is fully loaded
-    // Aligned with the current theme from globals.css
     switch (cssVariable) {
       case '--background': return 'hsl(0 0% 4%)';
       case '--foreground': return 'hsl(0 0% 98%)';
-      case '--primary': return 'hsl(260 48% 65%)'; // #977ad2
-      case '--accent': return 'hsl(0 0% 80%)'; // Light Gray
+      case '--primary': return 'hsl(260 48% 65%)'; 
+      case '--accent': return 'hsl(0 0% 80%)'; 
       case '--destructive': return 'hsl(0 84% 60%)';
       case '--card': return 'hsl(0 0% 8%)';
       case '--muted': return 'hsl(0 0% 15%)';
       case '--muted-foreground': return 'hsl(0 0% 65%)';
-      default: return 'hsl(0 0% 98%)'; // Default to foreground (white)
+      default: return 'hsl(0 0% 98%)';
     }
   }, []);
 
@@ -104,7 +102,7 @@ export default function PixelJumperGame() {
     let lastPlatformY = lastSafePlatformY;
 
     const platformColor = getThemeColor('--muted'); 
-    const foodColor = getThemeColor('--accent'); // Food items are light gray (accent)
+    const foodColor = getThemeColor('--accent');
     const enemyColor = getThemeColor('--destructive'); 
     const trapColor = getThemeColor('--destructive'); 
 
@@ -195,7 +193,8 @@ export default function PixelJumperGame() {
       vx: 0,
       vy: 0,
       isJumping: false,
-      color: getThemeColor('--accent'), // Player is accent color (light gray)
+      color: getThemeColor('--accent'),
+      animationFrame: 0, 
     });
     setPlatforms([]);
     setFoodItems([]);
@@ -265,7 +264,7 @@ export default function PixelJumperGame() {
     const gameLoop = setInterval(() => {
       setPlayer(prevPlayer => {
         if (!prevPlayer) return null;
-        let { x, y, vx, vy, isJumping, width, height } = prevPlayer;
+        let { x, y, vx, vy, isJumping, width, height, animationFrame } = prevPlayer;
 
         vx = 0;
         if (keysPressed.current['arrowleft'] || keysPressed.current['a'] || keysPressed.current['mobile_left']) {
@@ -326,7 +325,14 @@ export default function PixelJumperGame() {
                 setGameState('game_over_trap');
             }
         });
-        return { ...prevPlayer, x, y, vx, vy, isJumping };
+
+        if (!isJumping && Math.abs(vx) > 0) {
+            animationFrame = (animationFrame + 1); 
+        } else {
+            animationFrame = 0; 
+        }
+
+        return { ...prevPlayer, x, y, vx, vy, isJumping, animationFrame };
       });
 
       setEnemies(prevEnemies =>
@@ -379,7 +385,6 @@ export default function PixelJumperGame() {
     const bgColor = getThemeColor('--background');
     const fgColor = getThemeColor('--foreground'); 
     const playerColor = player?.color || getThemeColor('--accent'); 
-    const cardColor = getThemeColor('--card');
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, GAME_LOGIC_WIDTH, GAME_LOGIC_HEIGHT);
@@ -417,9 +422,78 @@ export default function PixelJumperGame() {
             ctx.closePath();
             ctx.fill();
         });
+        
         if (player) {
             ctx.fillStyle = playerColor;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            const headHeightRatio = 0.3;
+            const headWidthRatio = 0.6;
+            const torsoHeightRatio = 0.5;
+            const torsoWidthRatio = 1.0; 
+            const legHeightRatio = 0.45; 
+            const legWidthRatio = 0.25;
+
+            const headH = PLAYER_HEIGHT * headHeightRatio;
+            const headW = PLAYER_WIDTH * headWidthRatio;
+            const torsoH = PLAYER_HEIGHT * torsoHeightRatio;
+            const torsoW = PLAYER_WIDTH * torsoWidthRatio;
+            const legH = PLAYER_HEIGHT * legHeightRatio;
+            const legW = PLAYER_WIDTH * legWidthRatio;
+
+            const pX = player.x;
+            const pY = player.y;
+
+            const headRelX = (PLAYER_WIDTH - headW) / 2;
+            const headRelY = 0;
+            const torsoRelX = (PLAYER_WIDTH - torsoW) / 2;
+            const torsoRelY = headH;
+            
+            const drawHeadPart = (currentX: number, currentY: number) => {
+                ctx.fillRect(currentX + headRelX, currentY + headRelY, headW, headH);
+            };
+            const drawTorsoPart = (currentX: number, currentY: number) => {
+                ctx.fillRect(currentX + torsoRelX, currentY + torsoRelY, torsoW, torsoH);
+            };
+
+            if (player.isJumping) {
+                ctx.save();
+                const centerX = pX + PLAYER_WIDTH / 2;
+                const centerY = pY + PLAYER_HEIGHT / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(player.vy < 0 ? -0.10 : 0.05); 
+                ctx.translate(-centerX, -centerY);
+
+                drawHeadPart(pX, pY);
+                drawTorsoPart(pX, pY);
+                
+                const legJumpY = pY + headH + torsoH * 0.7;
+                ctx.fillRect(pX + torsoW * 0.15, legJumpY, legW, legH * 0.8); 
+                ctx.fillRect(pX + torsoW * 0.60, legJumpY, legW, legH * 0.8); 
+                ctx.restore();
+
+            } else if (Math.abs(player.vx) > 0) { // Running
+                const animCycle = 20; // Frames for one full run cycle (2 poses, each for 10 ticks)
+                const currentAnimFrame = player.animationFrame % animCycle;
+                const pose = Math.floor(currentAnimFrame / (animCycle / 2)); 
+
+                drawHeadPart(pX, pY);
+                drawTorsoPart(pX, pY);
+
+                const legBaseY = pY + headH + torsoH * 0.9; 
+                if (pose === 0) { 
+                    ctx.fillRect(pX + torsoW * 0.15, legBaseY - legH * 0.15, legW, legH); 
+                    ctx.fillRect(pX + torsoW * 0.60, legBaseY, legW, legH);      
+                } else { 
+                    ctx.fillRect(pX + torsoW * 0.15, legBaseY, legW, legH);            
+                    ctx.fillRect(pX + torsoW * 0.60, legBaseY - legH * 0.15, legW, legH); 
+                }
+            } else { // Idle Pose
+                drawHeadPart(pX, pY);
+                drawTorsoPart(pX, pY);
+                const legBaseY = pY + headH + torsoH;
+                ctx.fillRect(pX + torsoW * 0.15, legBaseY, legW, legH); 
+                ctx.fillRect(pX + torsoW * 0.60, legBaseY, legW, legH); 
+            }
         }
         ctx.restore();
 
@@ -432,7 +506,7 @@ export default function PixelJumperGame() {
     }
 
     if (gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') {
-        ctx.fillStyle = 'hsla(0, 0%, 4%, 0.8)'; // Explicit dark semi-transparent overlay
+        ctx.fillStyle = 'hsla(0, 0%, 4%, 0.8)';
         ctx.fillRect(0, 0, GAME_LOGIC_WIDTH, GAME_LOGIC_HEIGHT);
 
         ctx.fillStyle = fgColor; 
@@ -571,4 +645,3 @@ export default function PixelJumperGame() {
     </div>
   );
 }
-
