@@ -13,16 +13,16 @@
     --popover: 0 0% 6%; /* Dark Popover */
     --popover-foreground: 0 0% 98%;
 
-    --primary: 270 70% 60%; /* Vibrant Purple */
+    --primary: 252 100% 63%; /* New Purple: #6842ff */
     --primary-foreground: 0 0% 98%; /* White text on Purple */
 
-    --secondary: 270 50% 45%; /* Darker Purple for secondary elements */
+    --secondary: 252 80% 55%; /* Darker/less saturated version of new Purple */
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 15%; /* Muted Gray */
     --muted-foreground: 0 0% 65%; /* Lighter Muted Text */
 
-    --accent: 270 70% 70%; /* Lighter Purple for accents */
+    --accent: 252 100% 70%; /* Lighter version of new Purple */
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%; /* Standard Red for destructive actions */
@@ -30,26 +30,26 @@
 
     --border: 0 0% 20%; /* Subtle Border */
     --input: 0 0% 10%; /* Dark Input Background */
-    --ring: 270 70% 65%; /* Purple for rings */
+    --ring: 252 100% 65%; /* New Purple for rings */
 
     --radius: 0.5rem; /* Standard radius */
 
-    /* Chart colors - shades of purple and grays */
-    --chart-1: 270 70% 60%; /* Primary Purple */
-    --chart-2: 270 50% 50%;
-    --chart-3: 270 40% 40%;
+    /* Chart colors - shades of the new purple and grays */
+    --chart-1: 252 100% 63%; /* Primary New Purple */
+    --chart-2: 252 80% 55%;
+    --chart-3: 252 60% 45%;
     --chart-4: 0 0% 50%; /* Gray */
     --chart-5: 0 0% 30%; /* Darker Gray */
 
     /* Sidebar colors */
     --sidebar-background: 0 0% 3%; /* Very Dark for Sidebar */
     --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary: 252 100% 63%; /* New Purple */
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 270 70% 70%;
+    --sidebar-accent: 252 100% 70%; /* Lighter New Purple */
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 270 70% 65%;
+    --sidebar-ring: 252 100% 65%; /* New Purple */
   }
 
   .dark {
@@ -59,34 +59,34 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 6%;
     --popover-foreground: 0 0% 98%;
-    --primary: 270 70% 60%;
+    --primary: 252 100% 63%; /* New Purple: #6842ff */
     --primary-foreground: 0 0% 98%;
-    --secondary: 270 50% 45%;
+    --secondary: 252 80% 55%; /* Darker/less saturated version of new Purple */
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 65%;
-    --accent: 270 70% 70%;
+    --accent: 252 100% 70%; /* Lighter version of new Purple */
     --accent-foreground: 0 0% 98%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 20%;
     --input: 0 0% 10%;
-    --ring: 270 70% 65%;
+    --ring: 252 100% 65%; /* New Purple for rings */
 
-    --chart-1: 270 70% 60%;
-    --chart-2: 270 50% 50%;
-    --chart-3: 270 40% 40%;
+    --chart-1: 252 100% 63%;
+    --chart-2: 252 80% 55%;
+    --chart-3: 252 60% 45%;
     --chart-4: 0 0% 50%;
     --chart-5: 0 0% 30%;
 
     --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary: 252 100% 63%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 270 70% 70%;
+    --sidebar-accent: 252 100% 70%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 270 70% 65%;
+    --sidebar-ring: 252 100% 65%;
   }
 }
 
