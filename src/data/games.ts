@@ -8,7 +8,7 @@ export const games: Game[] = [
     thumbnail: 'https://i.imgur.com/dX6Zfku.png',
     slug: 'snake',
     description: 'The timeless classic, eat and grow to achieve the highest score!',
-    bannerImage: 'https://placehold.co/1200x400.png',
+    bannerImage: 'https://i.imgur.com/dX6Zfku.png', // Updated to use the same image
     dataAiHint: 'snake game',
   },
   {
