@@ -9,7 +9,6 @@ export default function Header() {
           <Gamepad2 size={32} />
           <h1 
             className="text-3xl font-headline"
-            style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
           >
             Zyngrid
           </h1>

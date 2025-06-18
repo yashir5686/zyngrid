@@ -39,7 +39,6 @@ export default function GameListClient() {
         <section className="my-12">
           <h2 
             className="text-3xl font-headline mb-6 text-primary flex items-center"
-            style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
           >
             <Star className="mr-3 h-8 w-8 text-accent" /> Top Games
           </h2>
@@ -55,7 +54,6 @@ export default function GameListClient() {
         <section className="my-12">
           <h2 
             className="text-3xl font-headline mb-6 text-primary flex items-center"
-            style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
           >
             <History className="mr-3 h-8 w-8 text-accent" /> Recently Played
           </h2>
