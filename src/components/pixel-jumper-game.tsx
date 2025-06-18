@@ -25,7 +25,7 @@ const ENEMY_HEIGHT = 25;
 const TRAP_SIZE = 20;
 
 const INITIAL_PLAYER_X = 50;
-const INITIAL_PLAYER_Y = GAME_LOGIC_HEIGHT - 100 - PLAYER_HEIGHT; // Adjusted for player height
+const INITIAL_PLAYER_Y = GAME_LOGIC_HEIGHT - 100 - PLAYER_HEIGHT; 
 
 const WORLD_CHUNK_WIDTH = GAME_LOGIC_WIDTH * 1.5; 
 const WORLD_GENERATION_THRESHOLD_FACTOR = 1.2; 
@@ -425,74 +425,68 @@ export default function PixelJumperGame() {
         
         if (player) {
             ctx.fillStyle = playerColor;
-
-            const headHeightRatio = 0.3;
-            const headWidthRatio = 0.6;
-            const torsoHeightRatio = 0.5;
-            const torsoWidthRatio = 1.0; 
-            const legHeightRatio = 0.45; 
-            const legWidthRatio = 0.25;
-
-            const headH = PLAYER_HEIGHT * headHeightRatio;
-            const headW = PLAYER_WIDTH * headWidthRatio;
-            const torsoH = PLAYER_HEIGHT * torsoHeightRatio;
-            const torsoW = PLAYER_WIDTH * torsoWidthRatio;
-            const legH = PLAYER_HEIGHT * legHeightRatio;
-            const legW = PLAYER_WIDTH * legWidthRatio;
-
             const pX = player.x;
             const pY = player.y;
 
+            // Player part dimensions
+            const headH = PLAYER_HEIGHT * 0.25;
+            const headW = PLAYER_WIDTH * 0.5;
+            const torsoH = PLAYER_HEIGHT * 0.45;
+            const torsoW = PLAYER_WIDTH * 0.7;
+            const legH = PLAYER_HEIGHT * 0.4;
+            const legW = PLAYER_WIDTH * 0.2;
+            const armH = PLAYER_HEIGHT * 0.35;
+            const armW = PLAYER_WIDTH * 0.15;
+
+            // Relative positions
             const headRelX = (PLAYER_WIDTH - headW) / 2;
             const headRelY = 0;
             const torsoRelX = (PLAYER_WIDTH - torsoW) / 2;
             const torsoRelY = headH;
-            
-            const drawHeadPart = (currentX: number, currentY: number) => {
-                ctx.fillRect(currentX + headRelX, currentY + headRelY, headW, headH);
-            };
-            const drawTorsoPart = (currentX: number, currentY: number) => {
-                ctx.fillRect(currentX + torsoRelX, currentY + torsoRelY, torsoW, torsoH);
-            };
+            const legYPos = pY + headH + torsoH;
+            const armYPos = pY + torsoRelY + torsoH * 0.1;
+
+
+            // Draw Head
+            ctx.fillRect(pX + headRelX, pY + headRelY, headW, headH);
+            // Draw Torso
+            ctx.fillRect(pX + torsoRelX, pY + torsoRelY, torsoW, torsoH);
 
             if (player.isJumping) {
-                ctx.save();
-                const centerX = pX + PLAYER_WIDTH / 2;
-                const centerY = pY + PLAYER_HEIGHT / 2;
-                ctx.translate(centerX, centerY);
-                ctx.rotate(player.vy < 0 ? -0.10 : 0.05); 
-                ctx.translate(-centerX, -centerY);
-
-                drawHeadPart(pX, pY);
-                drawTorsoPart(pX, pY);
-                
-                const legJumpY = pY + headH + torsoH * 0.7;
-                ctx.fillRect(pX + torsoW * 0.15, legJumpY, legW, legH * 0.8); 
-                ctx.fillRect(pX + torsoW * 0.60, legJumpY, legW, legH * 0.8); 
-                ctx.restore();
-
+                // Jumping Pose
+                // Legs tucked or trailing
+                ctx.fillRect(pX + torsoRelX + legW * 0.5, legYPos - legH * 0.1, legW, legH * 0.8); // Left leg
+                ctx.fillRect(pX + torsoRelX + torsoW - legW * 1.5, legYPos, legW, legH * 0.8); // Right leg
+                // Arms up/back
+                ctx.fillRect(pX + torsoRelX - armW, armYPos - armH * 0.2, armW, armH); // Left arm
+                ctx.fillRect(pX + torsoRelX + torsoW, armYPos - armH * 0.2, armW, armH); // Right arm
             } else if (Math.abs(player.vx) > 0) { // Running
-                const animCycle = 20; // Frames for one full run cycle (2 poses, each for 10 ticks)
+                const animCycle = 20; 
                 const currentAnimFrame = player.animationFrame % animCycle;
                 const pose = Math.floor(currentAnimFrame / (animCycle / 2)); 
 
-                drawHeadPart(pX, pY);
-                drawTorsoPart(pX, pY);
-
-                const legBaseY = pY + headH + torsoH * 0.9; 
                 if (pose === 0) { 
-                    ctx.fillRect(pX + torsoW * 0.15, legBaseY - legH * 0.15, legW, legH); 
-                    ctx.fillRect(pX + torsoW * 0.60, legBaseY, legW, legH);      
+                    // Pose 1: Left leg forward, right leg back
+                    ctx.fillRect(pX + torsoRelX, legYPos, legW, legH); // Left leg
+                    ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos + legH * 0.1, legW, legH * 0.9); // Right leg
+                    // Arms: Left arm back, right arm forward
+                    ctx.fillRect(pX + torsoRelX - armW, armYPos + armH * 0.1, armW, armH); // Left arm
+                    ctx.fillRect(pX + torsoRelX + torsoW, armYPos, armW, armH); // Right arm
                 } else { 
-                    ctx.fillRect(pX + torsoW * 0.15, legBaseY, legW, legH);            
-                    ctx.fillRect(pX + torsoW * 0.60, legBaseY - legH * 0.15, legW, legH); 
+                    // Pose 2: Right leg forward, left leg back
+                    ctx.fillRect(pX + torsoRelX, legYPos + legH * 0.1, legW, legH * 0.9); // Left leg
+                    ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos, legW, legH); // Right leg
+                    // Arms: Right arm back, left arm forward
+                    ctx.fillRect(pX + torsoRelX - armW, armYPos, armW, armH); // Left arm
+                    ctx.fillRect(pX + torsoRelX + torsoW, armYPos + armH * 0.1, armW, armH); // Right arm
                 }
             } else { // Idle Pose
-                drawHeadPart(pX, pY);
-                drawTorsoPart(pX, pY);
-                const legBaseY = pY + headH + torsoH;
-                ctx.fillRect(pX + torsoW * 0.15, legBaseY, legW, legH); 
-                ctx.fillRect(pX + torsoW * 0.60, legBaseY, legW, legH); 
+                // Legs straight down
+                ctx.fillRect(pX + torsoRelX, legYPos, legW, legH); // Left leg
+                ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos, legW, legH); // Right leg
+                // Arms straight down
+                ctx.fillRect(pX + torsoRelX - armW, armYPos, armW, armH); // Left arm
+                ctx.fillRect(pX + torsoRelX + torsoW, armYPos, armW, armH); // Right arm
             }
         }
         ctx.restore();
