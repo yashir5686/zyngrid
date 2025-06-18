@@ -11,7 +11,7 @@ export default function HomePage() {
 
       <section className="my-12">
         <h2 
-          className="text-3xl font-headline mb-6 text-primary flex items-center"
+          className="text-3xl font-headline mb-6 text-foreground flex items-center"
         >
           <Gamepad2 className="mr-3 h-8 w-8 text-accent" /> All Games
         </h2>

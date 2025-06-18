@@ -25,7 +25,7 @@ export default function FeaturedGameBanner({ game }: FeaturedGameBannerProps) {
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/50 to-transparent flex flex-col justify-end p-8 md:p-12">
         <h2 
-          className="text-4xl md:text-5xl font-headline text-primary mb-3 drop-shadow-lg"
+          className="text-4xl md:text-5xl font-headline text-foreground mb-3 drop-shadow-lg"
         >
           {game.name}
         </h2>

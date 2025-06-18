@@ -8,48 +8,48 @@
     --foreground: 0 0% 98%; /* White */
 
     --card: 0 0% 8%; /* Darker Gray for Cards */
-    --card-foreground: 0 0% 98%;
+    --card-foreground: 0 0% 98%; /* White text on Cards */
 
     --popover: 0 0% 6%; /* Dark Popover */
-    --popover-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 98%; /* White text on Popover */
 
-    --primary: 252 100% 63%; /* New Purple: #6842ff */
-    --primary-foreground: 0 0% 98%; /* White text on Purple */
+    --primary: 252 100% 63%; /* #6842ff - For Buttons & Logos ONLY */
+    --primary-foreground: 0 0% 98%; /* White text on Primary Buttons */
 
-    --secondary: 252 80% 55%; /* Darker/less saturated version of new Purple */
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 15%; /* Muted Gray for secondary elements */
+    --secondary-foreground: 0 0% 98%; /* White text on Muted Gray */
 
     --muted: 0 0% 15%; /* Muted Gray */
-    --muted-foreground: 0 0% 65%; /* Lighter Muted Text */
+    --muted-foreground: 0 0% 65%; /* Lighter Muted Text (Gray) */
 
-    --accent: 252 100% 70%; /* Lighter version of new Purple */
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 80%; /* Light Gray for non-logo icons, player characters */
+    --accent-foreground: 0 0% 4%; /* Dark text for light gray accent backgrounds */
 
     --destructive: 0 84% 60%; /* Standard Red for destructive actions */
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 20%; /* Subtle Border */
     --input: 0 0% 10%; /* Dark Input Background */
-    --ring: 252 100% 65%; /* New Purple for rings */
+    --ring: 252 100% 65%; /* #6842ff for focus rings */
 
     --radius: 0.5rem; /* Standard radius */
 
-    /* Chart colors - shades of the new purple and grays */
-    --chart-1: 252 100% 63%; /* Primary New Purple */
-    --chart-2: 252 80% 55%;
-    --chart-3: 252 60% 45%;
-    --chart-4: 0 0% 50%; /* Gray */
-    --chart-5: 0 0% 30%; /* Darker Gray */
+    /* Chart colors - shades of gray */
+    --chart-1: 0 0% 80%; /* Light Gray (Accent) */
+    --chart-2: 0 0% 60%;
+    --chart-3: 0 0% 45%;
+    --chart-4: 0 0% 30%;
+    --chart-5: 0 0% 20%;
 
     /* Sidebar colors */
-    --sidebar-background: 0 0% 3%; /* Very Dark for Sidebar */
-    --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 252 100% 63%; /* New Purple */
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 85%; /* Light gray text */
+    --sidebar-primary: 252 100% 63%; /* #6842ff for button-like elements in sidebar */
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 252 100% 70%; /* Lighter New Purple */
-    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 70%; /* Slightly darker gray for sidebar accents */
+    --sidebar-accent-foreground: 0 0% 4%;
     --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 252 100% 65%; /* New Purple */
+    --sidebar-ring: 252 100% 65%; /* #6842ff */
   }
 
   .dark {
@@ -59,32 +59,32 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 6%;
     --popover-foreground: 0 0% 98%;
-    --primary: 252 100% 63%; /* New Purple: #6842ff */
+    --primary: 252 100% 63%; /* #6842ff */
     --primary-foreground: 0 0% 98%;
-    --secondary: 252 80% 55%; /* Darker/less saturated version of new Purple */
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 65%;
-    --accent: 252 100% 70%; /* Lighter version of new Purple */
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 80%; /* Light Gray */
+    --accent-foreground: 0 0% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 20%;
     --input: 0 0% 10%;
-    --ring: 252 100% 65%; /* New Purple for rings */
+    --ring: 252 100% 65%; /* #6842ff */
 
-    --chart-1: 252 100% 63%;
-    --chart-2: 252 80% 55%;
-    --chart-3: 252 60% 45%;
-    --chart-4: 0 0% 50%;
-    --chart-5: 0 0% 30%;
+    --chart-1: 0 0% 80%;
+    --chart-2: 0 0% 60%;
+    --chart-3: 0 0% 45%;
+    --chart-4: 0 0% 30%;
+    --chart-5: 0 0% 20%;
 
     --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 85%;
     --sidebar-primary: 252 100% 63%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 252 100% 70%;
-    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 70%;
+    --sidebar-accent-foreground: 0 0% 4%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 252 100% 65%;
   }

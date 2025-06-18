@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { StarShooterPlayer, Bullet, EnemyShip, Star } from '@/types';
@@ -58,11 +57,11 @@ export default function StarShooterGame() {
     switch (cssVariable) {
       case '--background': return 'hsl(0 0% 4%)';
       case '--foreground': return 'hsl(0 0% 98%)';
-      case '--primary': return 'hsl(270 70% 60%)';   
-      case '--accent': return 'hsl(270 70% 70%)';    
+      case '--primary': return 'hsl(252 100% 63%)';   // #6842ff
+      case '--accent': return 'hsl(0 0% 80%)';    // Light Gray
       case '--destructive': return 'hsl(0 84% 60%)'; 
       case '--card': return 'hsl(0 0% 8%)';      
-      case '--secondary': return 'hsl(270 50% 45%)';
+      case '--secondary': return 'hsl(0 0% 15%)'; // Muted Gray for secondary elements (e.g. some enemies)
       case '--muted': return 'hsl(0 0% 15%)';      
       default: return 'hsl(0 0% 98%)';
     }
@@ -101,17 +100,18 @@ export default function StarShooterGame() {
 
   const initStars = useCallback(() => {
     const newStars: Star[] = [];
+    const starBaseColor = getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim(); // Use muted-foreground for stars
     for (let i = 0; i < STAR_COUNT; i++) {
       newStars.push({
         x: Math.random() * LOGIC_CANVAS_WIDTH,
         y: Math.random() * LOGIC_CANVAS_HEIGHT,
         size: Math.random() * 2 + 0.5,
         speed: Math.random() * 1 + 0.2,
-        color: `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()}, ${Math.random() * 0.5 + 0.3})`
+        color: `hsla(${starBaseColor}, ${Math.random() * 0.5 + 0.3})`
       });
     }
     setStars(newStars);
-  }, [getThemeColor]);
+  }, []); // Removed getThemeColor as it's not strictly needed for star color logic
 
   const startGame = useCallback(() => {
     const initialPlayer: StarShooterPlayer = {
@@ -121,7 +121,7 @@ export default function StarShooterGame() {
       width: PLAYER_WIDTH,
       height: PLAYER_HEIGHT,
       speed: PLAYER_SPEED,
-      color: getThemeColor('--primary'),
+      color: getThemeColor('--accent'), // Player is accent (light gray)
     };
     setPlayer(initialPlayer);
     playerRef.current = initialPlayer;
@@ -213,7 +213,7 @@ export default function StarShooterGame() {
           width: BULLET_WIDTH,
           height: BULLET_HEIGHT,
           speed: BULLET_SPEED,
-          color: getThemeColor('--accent'),
+          color: getThemeColor('--accent'), // Bullets are accent (light gray)
         };
         lastPlayerShotTime.current = currentTime;
       }
@@ -309,8 +309,8 @@ export default function StarShooterGame() {
         !LOCAL_playerHitInThisTick
       ) {
         const difficultyFactor = 1 + Math.min(scoreRef.current / 500, 2.5);
-        const enemyColor1 = getThemeColor('--destructive');
-        const enemyColor2 = getThemeColor('--secondary');
+        const enemyColor1 = getThemeColor('--destructive'); // Red
+        const enemyColor2 = getThemeColor('--secondary'); // Muted Gray
         const newEnemy: EnemyShip = {
           id: `enemy_${performance.now()}_${Math.random().toString(36).substring(2, 9)}`,
           x: Math.random() * (LOGIC_CANVAS_WIDTH - ENEMY_WIDTH),
@@ -352,15 +352,15 @@ export default function StarShooterGame() {
     ctx.scale(scaleX, scaleY);
 
     const bgColor = getThemeColor('--background');
-    const fgColor = getThemeColor('--foreground');
-    const playerColor = player?.color || getThemeColor('--primary');
-    const bulletColor = getThemeColor('--accent');
+    const fgColor = getThemeColor('--foreground'); // White for text
+    const playerColor = player?.color || getThemeColor('--accent'); // Player is light gray
+    const bulletColor = getThemeColor('--accent'); // Bullets are light gray
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, LOGIC_CANVAS_WIDTH, LOGIC_CANVAS_HEIGHT);
 
     stars.forEach(star => {
-      ctx.fillStyle = star.color || getThemeColor('--muted-foreground');
+      ctx.fillStyle = star.color || getThemeColor('--muted-foreground'); // Stars are muted gray
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
       ctx.fill();
@@ -385,12 +385,12 @@ export default function StarShooterGame() {
       });
 
       enemiesForCollisionRef.current.forEach(enemy => {
-        const currentEnemyColor = enemy.color || getThemeColor('--destructive');
+        const currentEnemyColor = enemy.color || getThemeColor('--destructive'); // Enemies are red or secondary (muted gray)
         ctx.fillStyle = currentEnemyColor;
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
       });
 
-      ctx.fillStyle = fgColor;
+      ctx.fillStyle = fgColor; // Score text is white
       ctx.font = '20px "Space Grotesk", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`Score: ${score}`, 10, 30);
@@ -399,10 +399,10 @@ export default function StarShooterGame() {
     }
 
     if (gameState === 'game_over') {
-      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()}, 0.8)`; // Simpler overlay
-      ctx.fillRect(LOGIC_CANVAS_WIDTH / 4, LOGIC_CANVAS_HEIGHT / 2 - 60, LOGIC_CANVAS_WIDTH / 2, 120);
+      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()}, 0.8)`;
+      ctx.fillRect(0, 0, LOGIC_CANVAS_WIDTH, LOGIC_CANVAS_HEIGHT); // Full screen overlay
 
-      ctx.fillStyle = fgColor;
+      ctx.fillStyle = fgColor; // Game Over text is white
       ctx.textAlign = 'center';
       ctx.font = 'bold 28px "Space Grotesk", sans-serif';
       ctx.fillText('Game Over!', LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 - 20);
@@ -419,12 +419,12 @@ export default function StarShooterGame() {
   if (gameState === 'menu') {
     return (
       <div className="flex flex-col items-center justify-center p-4 min-h-[70vh] gap-6 w-full">
-        <Card className="w-full max-w-md bg-card/90 shadow-xl text-center border-primary/50">
+        <Card className="w-full max-w-md bg-card/90 shadow-xl text-center border-border"> {/* Card border to border */}
           <CardHeader>
             <CardTitle 
-              className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2"
+              className="text-3xl md:text-4xl font-headline text-foreground flex items-center justify-center gap-2" /* Title to foreground */
             >
-                <Gamepad2 size={isMobile ? 30: 36} /> Star Shooter
+                <Gamepad2 size={isMobile ? 30: 36} className="text-accent" /> {/* Icon is accent */} Star Shooter
             </CardTitle>
             <CardContent className="text-muted-foreground text-sm md:text-base pt-2">Blast through endless waves of aliens! Your ship fires automatically.</CardContent>
           </CardHeader>
@@ -432,11 +432,11 @@ export default function StarShooterGame() {
             <Button 
               onClick={startGame} 
               size="lg" 
-              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg"
+              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg" /* Button is primary */
             >
               <Play className="mr-2" /> Start Game
             </Button>
-             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: <span className="text-accent font-semibold">{highScore}</span></p>
+             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: <span className="text-foreground font-semibold">{highScore}</span></p> {/* High score text to foreground */}
           </CardContent>
         </Card>
       </div>
@@ -445,16 +445,16 @@ export default function StarShooterGame() {
 
   return (
     <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
-      <Card className="w-full bg-card/90 shadow-xl overflow-hidden border-primary/30" style={{maxWidth: actualCanvasSize.width }}>
+      <Card className="w-full bg-card/90 shadow-xl overflow-hidden border-border" style={{maxWidth: actualCanvasSize.width }}> {/* Card border to border */}
         <CardHeader className="text-center pb-2">
             <CardTitle 
-              className="text-2xl md:text-3xl font-headline text-primary"
+              className="text-2xl md:text-3xl font-headline text-foreground" /* Title to foreground */
             >
               Star Shooter
             </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4 p-2 sm:p-4">
-            <div className="border-2 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height }}>
+            <div className="border-2 border-border rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height }}> {/* Game border to border */}
                 <canvas
                 ref={canvasRef}
                 width={actualCanvasSize.width} 
@@ -466,10 +466,10 @@ export default function StarShooterGame() {
             </div>
           {gameState === 'game_over' && (
             <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 mt-4">
-              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base">
+              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base"> {/* Button is primary */}
                 <RotateCcw className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Try Again
               </Button>
-              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base border-primary/70 hover:bg-primary/20 hover:text-primary">
+              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base border-primary/70 hover:bg-primary/20 hover:text-primary-foreground"> {/* Outline button uses primary for interaction highlights */}
                 <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Main Menu
               </Button>
             </div>
@@ -488,7 +488,7 @@ export default function StarShooterGame() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="aspect-square h-16 w-16 bg-card/70 border-primary/70 hover:bg-primary/30"
+              className="aspect-square h-16 w-16 bg-card/70 border-primary/70 hover:bg-primary/30" /* Mobile controls use primary for interaction highlights */
               onTouchStart={() => handleMobileMove('left')}
               onTouchEnd={() => handleMobileMove('stop')}
               onClick={() => handleMobileMove('left')}
@@ -507,8 +507,8 @@ export default function StarShooterGame() {
               <MoveRight size={32} />
             </Button>
           </div>
-          <div className="aspect-square h-20 w-20 rounded-full flex items-center justify-center bg-card/30 border border-primary/50" aria-hidden="true">
-            <Pointer size={40} className="text-primary opacity-70" />
+          <div className="aspect-square h-20 w-20 rounded-full flex items-center justify-center bg-card/30 border border-primary/50" aria-hidden="true"> {/* Decorative element, uses primary for border */}
+            <Pointer size={40} className="text-primary opacity-70" /> {/* Icon is primary */}
           </div>
         </div>
       )}
@@ -517,8 +517,8 @@ export default function StarShooterGame() {
         <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play Star Shooter</h3>
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use on-screen buttons" : "Use Arrow Keys or A/D"} for left/right movement.</li>
-          <li>Your ship fires <span className="text-accent font-semibold">purple bullets</span> automatically!</li>
-          <li>Destroy <span className="font-semibold" style={{color: getThemeColor('--destructive')}}>enemy ships (red or dark purple)</span> to score points.</li>
+          <li>Your ship fires <span className="font-semibold" style={{color: getThemeColor('--accent')}}>light gray bullets</span> automatically!</li>
+          <li>Destroy <span className="font-semibold" style={{color: getThemeColor('--destructive')}}>enemy ships (red or dark gray)</span> to score points.</li>
           <li>Avoid colliding with enemy ships.</li>
           <li>The game gets faster as your score increases!</li>
           <li>{isMobile ? "Use game's menu options" : "Press Esc"} to return to the main menu.</li>

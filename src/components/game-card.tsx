@@ -25,14 +25,14 @@ export default function GameCard({ game }: GameCardProps) {
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <CardTitle
-          className="text-xl font-headline text-primary mb-2"
+          className="text-xl font-headline text-foreground mb-2"
         >
           {game.name}
         </CardTitle>
         <p className="text-sm text-muted-foreground line-clamp-3">{game.description}</p>
       </CardContent>
       <CardFooter className="p-4 border-t border-border">
-        <Button asChild className="w-full bg-accent hover:bg-accent/80 text-accent-foreground">
+        <Button asChild className="w-full bg-primary hover:bg-primary/80 text-primary-foreground">
           <Link href={`/games/${game.slug}`}>
             <Play className="mr-2 h-5 w-5" /> Play Now
           </Link>

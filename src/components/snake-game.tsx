@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -38,16 +37,16 @@ export default function SnakeGame() {
     if (typeof window !== 'undefined') {
       return `hsl(${getComputedStyle(document.documentElement).getPropertyValue(cssVariable).trim()})`;
     }
-    // Fallback colors for non-browser environments (should ideally not be needed for client component)
+    // Fallback colors
     switch (cssVariable) {
       case '--background': return 'hsl(0 0% 4%)';
       case '--foreground': return 'hsl(0 0% 98%)';
-      case '--primary': return 'hsl(270 70% 60%)';
-      case '--accent': return 'hsl(270 70% 70%)';
+      case '--primary': return 'hsl(252 100% 63%)'; // #6842ff
+      case '--accent': return 'hsl(0 0% 80%)'; // Light Gray
       case '--card': return 'hsl(0 0% 8%)';
       case '--border': return 'hsl(0 0% 20%)';
       case '--destructive': return 'hsl(0 84% 60%)';
-      default: return 'hsl(0 0% 98%)'; // Default to foreground
+      default: return 'hsl(0 0% 98%)';
     }
   }, []);
 
@@ -197,17 +196,17 @@ export default function SnakeGame() {
         ctx.stroke();
     }
     
-    const foodColor = getThemeColor('--accent');
+    const foodColor = getThemeColor('--accent'); // Use accent for food
     ctx.fillStyle = foodColor;
     ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
-    ctx.strokeStyle = getThemeColor('--accent-foreground');
+    ctx.strokeStyle = getThemeColor('--accent-foreground'); // Use accent-foreground if food background is light
     ctx.strokeRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
     
-    const snakeColor = getThemeColor('--primary');
+    const snakeColor = getThemeColor('--accent'); // Use accent for player snake
     ctx.fillStyle = snakeColor;
     snake.forEach((segment, index) => {
       ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
-      ctx.strokeStyle = getThemeColor('--primary-foreground');
+      ctx.strokeStyle = getThemeColor('--accent-foreground'); // Use accent-foreground for snake border
       ctx.strokeRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
       if (index === 0) { // Snake Head
         ctx.fillStyle = getThemeColor('--background'); // Eye color
@@ -225,14 +224,14 @@ export default function SnakeGame() {
     });
 
     if (!gameStarted && !gameOver) {
-      ctx.fillStyle = getThemeColor('--foreground'); // Use foreground for text
+      ctx.fillStyle = getThemeColor('--foreground'); 
       ctx.textAlign = 'center';
       ctx.font = `${Math.max(16, canvasSize.width / 20)}px "Space Grotesk", sans-serif`;
       ctx.fillText('Press "Start Game" to Play!', canvasSize.width / 2, canvasSize.height / 2);
     }
 
     if (gameOver) {
-      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()}, 0.8)`; // Simpler overlay
+      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()}, 0.8)`;
       ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
       ctx.fillStyle = getThemeColor('--foreground');
       ctx.textAlign = 'center';
@@ -247,20 +246,20 @@ export default function SnakeGame() {
 
   return (
     <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
-      <Card className="w-full max-w-md bg-card/90 shadow-lg border-primary/50">
+      <Card className="w-full max-w-md bg-card/90 shadow-lg border-border"> {/* Changed border to border from primary */}
         <CardHeader>
           <CardTitle 
-            className="text-2xl md:text-3xl font-headline text-primary text-center"
+            className="text-2xl md:text-3xl font-headline text-foreground text-center" /* Changed to text-foreground */
           >
             Classic Snake
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <div className="flex justify-around w-full text-md md:text-lg">
-            <p className="font-semibold text-foreground/80">Score: <span className="text-accent font-headline">{score}</span></p>
-            <p className="font-semibold text-foreground/80 flex items-center"><Trophy className="mr-1 md:mr-2 h-4 w-4 md:h-5 md:w-5 text-yellow-400" /> High Score: <span className="text-accent font-headline">{highScore}</span></p>
+            <p className="font-semibold text-foreground/80">Score: <span className="text-foreground font-headline">{score}</span></p> {/* Score text to foreground */}
+            <p className="font-semibold text-foreground/80 flex items-center"><Trophy className="mr-1 md:mr-2 h-4 w-4 md:h-5 md:w-5 text-yellow-400" /> High Score: <span className="text-foreground font-headline">{highScore}</span></p> {/* High score text to foreground */}
           </div>
-          <div className="border-2 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: canvasSize.width, height: canvasSize.height }}>
+          <div className="border-2 border-border rounded-md overflow-hidden shadow-inner bg-background" style={{ width: canvasSize.width, height: canvasSize.height }}> {/* Border to border */}
             <canvas
               ref={canvasRef}
               width={canvasSize.width}
@@ -274,7 +273,7 @@ export default function SnakeGame() {
             <Button 
               onClick={resetGame} 
               size="lg" 
-              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg"
+              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg" /* This is a button, so primary is correct */
             >
               <RefreshCcw className="mr-2 h-5 w-5" /> {gameOver ? 'Play Again' : 'Start Game'}
             </Button>
@@ -289,7 +288,7 @@ export default function SnakeGame() {
       {isMobile && gameStarted && !gameOver && (
         <div className="mt-4 grid grid-cols-3 gap-2 w-full max-w-xs">
           <div></div> 
-          <Button variant="outline" className="aspect-square h-16 w-full bg-card/70 border-primary/70 hover:bg-primary/30" onClick={() => changeDirection('UP')} aria-label="Move Up">
+          <Button variant="outline" className="aspect-square h-16 w-full bg-card/70 border-primary/70 hover:bg-primary/30" onClick={() => changeDirection('UP')} aria-label="Move Up"> {/* Mobile control buttons use primary for border/hover */ }
             <ArrowUp size={32} />
           </Button>
           <div></div> 
@@ -310,7 +309,7 @@ export default function SnakeGame() {
         <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play</h3>
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use the on-screen buttons" : "Use Arrow Keys"} to control the snake.</li>
-          <li>Eat the <span className="text-accent font-semibold">purple food</span> to grow and score points.</li>
+          <li>Eat the <span className="font-semibold" style={{color: getThemeColor('--accent')}}>light gray food</span> to grow and score points.</li>
           <li>Avoid hitting the walls or your own tail.</li>
           <li>The game speeds up as you eat more food!</li>
           <li>Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">Esc</kbd> to reset the game (desktop only).</li>

@@ -38,9 +38,9 @@ export default function GameListClient() {
       {topGames.length > 0 && (
         <section className="my-12">
           <h2 
-            className="text-3xl font-headline mb-6 text-primary flex items-center"
+            className="text-3xl font-headline mb-6 text-foreground flex items-center"
           >
-            <Star className="mr-3 h-8 w-8 text-accent" /> Top Games
+            <Star className="mr-3 h-8 w-8 text-accent" /> Top Games {/* Icon is accent (light gray) */}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {topGames.map(game => (
@@ -53,9 +53,9 @@ export default function GameListClient() {
       {recentlyPlayedGames.length > 0 && (
         <section className="my-12">
           <h2 
-            className="text-3xl font-headline mb-6 text-primary flex items-center"
+            className="text-3xl font-headline mb-6 text-foreground flex items-center"
           >
-            <History className="mr-3 h-8 w-8 text-accent" /> Recently Played
+            <History className="mr-3 h-8 w-8 text-accent" /> Recently Played {/* Icon is accent (light gray) */}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentlyPlayedGames.map(game => (

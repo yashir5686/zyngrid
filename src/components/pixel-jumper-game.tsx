@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Player, Platform, FoodItem, Enemy, Trap } from '@/types';
@@ -60,8 +59,8 @@ export default function PixelJumperGame() {
     switch (cssVariable) {
       case '--background': return 'hsl(0 0% 4%)';
       case '--foreground': return 'hsl(0 0% 98%)';
-      case '--primary': return 'hsl(270 70% 60%)';
-      case '--accent': return 'hsl(270 70% 70%)';
+      case '--primary': return 'hsl(252 100% 63%)'; // #6842ff
+      case '--accent': return 'hsl(0 0% 80%)'; // Light Gray
       case '--destructive': return 'hsl(0 84% 60%)';
       case '--card': return 'hsl(0 0% 8%)';
       case '--muted': return 'hsl(0 0% 15%)';
@@ -101,10 +100,10 @@ export default function PixelJumperGame() {
     const generationEndX = currentLastX + WORLD_CHUNK_WIDTH;
     let lastPlatformY = lastSafePlatformY;
 
-    const platformColor = getThemeColor('--muted');
-    const foodColor = getThemeColor('--accent');
-    const enemyColor = getThemeColor('--destructive');
-    const trapColor = getThemeColor('--destructive');
+    const platformColor = getThemeColor('--muted'); // Platforms are muted gray
+    const foodColor = getThemeColor('--accent'); // Food items are light gray (accent)
+    const enemyColor = getThemeColor('--destructive'); // Enemies are red
+    const trapColor = getThemeColor('--destructive'); // Traps are red
 
     if (currentLastX === 0) {
         const startPlatform: Platform = {
@@ -193,7 +192,7 @@ export default function PixelJumperGame() {
       vx: 0,
       vy: 0,
       isJumping: false,
-      color: getThemeColor('--primary'),
+      color: getThemeColor('--accent'), // Player is accent color (light gray)
     });
     setPlatforms([]);
     setFoodItems([]);
@@ -375,8 +374,8 @@ export default function PixelJumperGame() {
     if (!ctx) return;
     
     const bgColor = getThemeColor('--background');
-    const fgColor = getThemeColor('--foreground');
-    const playerColor = player?.color || getThemeColor('--primary');
+    const fgColor = getThemeColor('--foreground'); // White
+    const playerColor = player?.color || getThemeColor('--accent'); // Player is light gray
     const cardColor = getThemeColor('--card');
 
     ctx.fillStyle = bgColor;
@@ -387,23 +386,23 @@ export default function PixelJumperGame() {
         ctx.translate(-cameraOffsetX, 0);
 
         platforms.forEach(platform => {
-            ctx.fillStyle = platform.color || getThemeColor('--muted');
+            ctx.fillStyle = platform.color || getThemeColor('--muted'); // Platforms are muted gray
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
         });
         foodItems.forEach(food => {
             if (!food.collected) {
-              const itemColor = food.color || getThemeColor('--accent');
+              const itemColor = food.color || getThemeColor('--accent'); // Food items are light gray
               ctx.fillStyle = itemColor;
               ctx.fillRect(food.x, food.y, food.width, food.height);
             }
         });
         enemies.forEach(enemy => {
-            const enemyColor = enemy.color || getThemeColor('--destructive');
+            const enemyColor = enemy.color || getThemeColor('--destructive'); // Enemies are red
             ctx.fillStyle = enemyColor;
             ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         });
         traps.forEach(trap => {
-            const trapColor = trap.color || getThemeColor('--destructive');
+            const trapColor = trap.color || getThemeColor('--destructive'); // Traps are red
             ctx.fillStyle = trapColor;
             ctx.beginPath();
             ctx.moveTo(trap.x, trap.y + trap.height);
@@ -418,7 +417,7 @@ export default function PixelJumperGame() {
         }
         ctx.restore();
 
-        ctx.fillStyle = fgColor;
+        ctx.fillStyle = fgColor; // Score text is white
         ctx.font = '18px "Space Grotesk", sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(`Score: ${score}`, 10, 25);
@@ -427,10 +426,10 @@ export default function PixelJumperGame() {
     }
 
     if (gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') {
-        ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()}, 0.8)`; // Simpler overlay
+        ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()}, 0.8)`;
         ctx.fillRect(0, 0, GAME_LOGIC_WIDTH, GAME_LOGIC_HEIGHT);
 
-        ctx.fillStyle = fgColor;
+        ctx.fillStyle = fgColor; // Game Over text is white
         ctx.textAlign = 'center';
 
         ctx.font = 'bold 36px "Space Grotesk", sans-serif';
@@ -452,12 +451,12 @@ export default function PixelJumperGame() {
   if (gameState === 'menu') {
     return (
       <div className="flex flex-col items-center justify-center p-4 min-h-[70vh] gap-6 w-full">
-        <Card className="w-full max-w-md bg-card/90 shadow-xl text-center border-primary/50">
+        <Card className="w-full max-w-md bg-card/90 shadow-xl text-center border-border"> {/* Card border to border */}
           <CardHeader>
             <CardTitle 
-              className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2"
+              className="text-3xl md:text-4xl font-headline text-foreground flex items-center justify-center gap-2" /* Title to foreground */
             >
-                <Gamepad2 size={isMobile ? 30: 36} /> Pixel Jumper Endless
+                <Gamepad2 size={isMobile ? 30: 36} className="text-accent"/> {/* Icon is accent */} Pixel Jumper Endless
             </CardTitle>
             <CardContent className="text-muted-foreground text-sm md:text-base pt-2">Jump, collect, and survive as long as you can in this endless world!</CardContent>
           </CardHeader>
@@ -465,11 +464,11 @@ export default function PixelJumperGame() {
             <Button 
               onClick={startGame} 
               size="lg" 
-              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg"
+              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg" /* Button is primary */
             >
               <Play className="mr-2" /> Start Game
             </Button>
-             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: <span className="text-accent font-semibold">{highScore}</span></p>
+             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: <span className="text-foreground font-semibold">{highScore}</span></p> {/* High score text to foreground */}
           </CardContent>
         </Card>
       </div>
@@ -478,16 +477,16 @@ export default function PixelJumperGame() {
 
   return (
     <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
-      <Card className="w-full bg-card/90 shadow-xl overflow-hidden border-primary/30" style={{maxWidth: actualCanvasSize.width }}>
+      <Card className="w-full bg-card/90 shadow-xl overflow-hidden border-border" style={{maxWidth: actualCanvasSize.width }}> {/* Card border to border */}
         <CardHeader className="text-center pb-2">
             <CardTitle 
-              className="text-2xl md:text-3xl font-headline text-primary"
+              className="text-2xl md:text-3xl font-headline text-foreground" /* Title to foreground */
             >
               Pixel Jumper Endless
             </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4 p-2 sm:p-4">
-            <div className="border-2 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height }}>
+            <div className="border-2 border-border rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height }}> {/* Game border to border */}
                 <canvas
                 ref={canvasRef}
                 width={GAME_LOGIC_WIDTH} 
@@ -500,10 +499,10 @@ export default function PixelJumperGame() {
             </div>
           {(gameState === 'game_over_fall' || gameState === 'game_over_enemy' || gameState === 'game_over_trap') && (
             <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 mt-4">
-              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base">
+              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base"> {/* Button is primary */}
                 <RotateCcw className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Try Again
               </Button>
-              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base border-primary/70 hover:bg-primary/20 hover:text-primary">
+              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base border-primary/70 hover:bg-primary/20 hover:text-primary-foreground"> {/* Outline button also uses primary for interaction highlights */}
                 <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Main Menu
               </Button>
             </div>
@@ -522,7 +521,7 @@ export default function PixelJumperGame() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="aspect-square h-16 w-16 bg-card/70 border-primary/70 hover:bg-primary/30"
+              className="aspect-square h-16 w-16 bg-card/70 border-primary/70 hover:bg-primary/30" /* Mobile controls use primary for interaction highlights */
               onTouchStart={() => handleMobileMove('left')}
               onTouchEnd={() => handleMobileMove('stop')}
               onClick={() => handleMobileMove('left')} 
@@ -557,7 +556,7 @@ export default function PixelJumperGame() {
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use on-screen buttons" : "Use Arrow Keys or A/D"} for left/right movement.</li>
           <li>{isMobile ? "Tap the large up arrow button" : "Press Spacebar, W, or Up Arrow"} to jump.</li>
-          <li>Collect <span className="text-accent font-semibold">purple items</span> for points.</li>
+          <li>Collect <span className="font-semibold" style={{color: getThemeColor('--accent')}}>light gray items</span> for points.</li>
           <li>Avoid <span className="font-semibold" style={{color: getThemeColor('--destructive')}}>red enemies & traps</span>!</li>
           <li>Don't fall off the screen! Survive as long as you can.</li>
           <li>{isMobile ? "Use game's menu options" : "Press Esc"} to return to the main menu.</li>
