@@ -23,12 +23,14 @@ export const games: Game[] = [
   {
     id: 'star-shooter',
     name: 'Star Shooter',
-    thumbnail: 'https://placehold.co/300x200.png',
+    thumbnail: 'https://i.imgur.com/XCHt2BH.png',
     slug: 'star-shooter',
     description: 'Blast your way through waves of alien ships in this retro space shooter.',
+    bannerImage: 'https://i.imgur.com/XCHt2BH.png',
     dataAiHint: 'space shooter',
   },
 ];
 
 // Ensure featuredGame correctly finds 'snake' or falls back.
 export const featuredGame: Game = games.find(game => game.id === 'snake') || games[0];
+
