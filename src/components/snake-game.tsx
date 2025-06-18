@@ -202,7 +202,7 @@ export default function SnakeGame() {
     ctx.strokeStyle = getThemeColor('--accent-foreground'); // Use accent-foreground if food background is light
     ctx.strokeRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
     
-    const snakeColor = getThemeColor('--accent'); // Use accent for player snake
+    const snakeColor = getThemeColor('--primary'); // Use primary color for player snake
     ctx.fillStyle = snakeColor;
     snake.forEach((segment, index) => {
       ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
@@ -239,6 +239,7 @@ export default function SnakeGame() {
       ctx.fillText('Game Over!', canvasSize.width / 2, canvasSize.height / 2 - 20);
       ctx.font = `${Math.max(16, canvasSize.width / 20)}px "Space Grotesk", sans-serif`;
       ctx.fillText(`Final Score: ${score}`, canvasSize.width / 2, canvasSize.height / 2 + 20);
+      ctx.fillText(`Highest Score: ${highScore}`, canvasSize.width / 2, canvasSize.height / 2 + 50);
     }
 
   }, [snake, food, gameOver, gameStarted, score, direction, canvasSize, cellSize, getThemeColor]);
