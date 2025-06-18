@@ -8,16 +8,16 @@ export const games: Game[] = [
     thumbnail: 'https://i.imgur.com/dX6Zfku.png',
     slug: 'snake',
     description: 'The timeless classic, eat and grow to achieve the highest score!',
-    bannerImage: 'https://i.imgur.com/dX6Zfku.png', // Updated to use the same image
+    bannerImage: 'https://i.imgur.com/dX6Zfku.png',
     dataAiHint: 'snake game',
   },
   {
     id: 'pixel-jumper',
     name: 'Pixel Jumper',
-    thumbnail: 'https://placehold.co/300x200.png', 
+    thumbnail: 'https://i.imgur.com/hGuv3Gd.png',
     slug: 'pixel-jumper',
     description: 'Jump across platforms, collect items, and reach the goal in this pixelated adventure.',
-    bannerImage: 'https://placehold.co/1200x400.png', 
+    bannerImage: 'https://i.imgur.com/hGuv3Gd.png',
     dataAiHint: 'pixel platformer',
   },
   {
