@@ -102,7 +102,7 @@ export default function PixelJumperGame() {
     let lastPlatformY = lastSafePlatformY;
 
     const platformColor = getThemeColor('--muted'); 
-    const foodColor = getThemeColor('--accent');
+    const foodColor = getThemeColor('--primary'); // Food items are purple
     const enemyColor = getThemeColor('--destructive'); 
     const trapColor = getThemeColor('--destructive'); 
 
@@ -397,16 +397,26 @@ export default function PixelJumperGame() {
             ctx.fillStyle = platform.color || getThemeColor('--muted'); 
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
         });
+
+        const originalShadowBlur = ctx.shadowBlur;
+        const originalShadowColor = ctx.shadowColor;
+
         foodItems.forEach(food => {
             if (!food.collected) {
-              const itemColor = food.color || getThemeColor('--accent'); 
+              const itemColor = food.color || getThemeColor('--primary'); 
               ctx.fillStyle = itemColor;
+              ctx.shadowColor = itemColor;
+              ctx.shadowBlur = 10;
+
               ctx.beginPath();
               ctx.arc(food.x + food.width / 2, food.y + food.height / 2, food.width / 1.7, 0, 2 * Math.PI);
               ctx.fill();
               ctx.closePath();
             }
         });
+        ctx.shadowBlur = originalShadowBlur;
+        ctx.shadowColor = originalShadowColor;
+        
         enemies.forEach(enemy => {
             const enemyColor = enemy.color || getThemeColor('--destructive'); 
             ctx.fillStyle = enemyColor;
@@ -428,7 +438,6 @@ export default function PixelJumperGame() {
             const pX = player.x;
             const pY = player.y;
 
-            // Player part dimensions
             const headH = PLAYER_HEIGHT * 0.25;
             const headW = PLAYER_WIDTH * 0.5;
             const torsoH = PLAYER_HEIGHT * 0.45;
@@ -438,7 +447,6 @@ export default function PixelJumperGame() {
             const armH = PLAYER_HEIGHT * 0.35;
             const armW = PLAYER_WIDTH * 0.15;
 
-            // Relative positions
             const headRelX = (PLAYER_WIDTH - headW) / 2;
             const headRelY = 0;
             const torsoRelX = (PLAYER_WIDTH - torsoW) / 2;
@@ -446,47 +454,35 @@ export default function PixelJumperGame() {
             const legYPos = pY + headH + torsoH;
             const armYPos = pY + torsoRelY + torsoH * 0.1;
 
-
-            // Draw Head
             ctx.fillRect(pX + headRelX, pY + headRelY, headW, headH);
-            // Draw Torso
             ctx.fillRect(pX + torsoRelX, pY + torsoRelY, torsoW, torsoH);
 
             if (player.isJumping) {
-                // Jumping Pose
-                // Legs tucked or trailing
-                ctx.fillRect(pX + torsoRelX + legW * 0.5, legYPos - legH * 0.1, legW, legH * 0.8); // Left leg
-                ctx.fillRect(pX + torsoRelX + torsoW - legW * 1.5, legYPos, legW, legH * 0.8); // Right leg
-                // Arms up/back
-                ctx.fillRect(pX + torsoRelX - armW, armYPos - armH * 0.2, armW, armH); // Left arm
-                ctx.fillRect(pX + torsoRelX + torsoW, armYPos - armH * 0.2, armW, armH); // Right arm
-            } else if (Math.abs(player.vx) > 0) { // Running
+                ctx.fillRect(pX + torsoRelX + legW * 0.5, legYPos - legH * 0.1, legW, legH * 0.8); 
+                ctx.fillRect(pX + torsoRelX + torsoW - legW * 1.5, legYPos, legW, legH * 0.8); 
+                ctx.fillRect(pX + torsoRelX - armW, armYPos - armH * 0.2, armW, armH); 
+                ctx.fillRect(pX + torsoRelX + torsoW, armYPos - armH * 0.2, armW, armH); 
+            } else if (Math.abs(player.vx) > 0) { 
                 const animCycle = 20; 
                 const currentAnimFrame = player.animationFrame % animCycle;
                 const pose = Math.floor(currentAnimFrame / (animCycle / 2)); 
 
                 if (pose === 0) { 
-                    // Pose 1: Left leg forward, right leg back
-                    ctx.fillRect(pX + torsoRelX, legYPos, legW, legH); // Left leg
-                    ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos + legH * 0.1, legW, legH * 0.9); // Right leg
-                    // Arms: Left arm back, right arm forward
-                    ctx.fillRect(pX + torsoRelX - armW, armYPos + armH * 0.1, armW, armH); // Left arm
-                    ctx.fillRect(pX + torsoRelX + torsoW, armYPos, armW, armH); // Right arm
+                    ctx.fillRect(pX + torsoRelX, legYPos, legW, legH); 
+                    ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos + legH * 0.1, legW, legH * 0.9); 
+                    ctx.fillRect(pX + torsoRelX - armW, armYPos + armH * 0.1, armW, armH); 
+                    ctx.fillRect(pX + torsoRelX + torsoW, armYPos, armW, armH); 
                 } else { 
-                    // Pose 2: Right leg forward, left leg back
-                    ctx.fillRect(pX + torsoRelX, legYPos + legH * 0.1, legW, legH * 0.9); // Left leg
-                    ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos, legW, legH); // Right leg
-                    // Arms: Right arm back, left arm forward
-                    ctx.fillRect(pX + torsoRelX - armW, armYPos, armW, armH); // Left arm
-                    ctx.fillRect(pX + torsoRelX + torsoW, armYPos + armH * 0.1, armW, armH); // Right arm
+                    ctx.fillRect(pX + torsoRelX, legYPos + legH * 0.1, legW, legH * 0.9); 
+                    ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos, legW, legH); 
+                    ctx.fillRect(pX + torsoRelX - armW, armYPos, armW, armH); 
+                    ctx.fillRect(pX + torsoRelX + torsoW, armYPos + armH * 0.1, armW, armH); 
                 }
-            } else { // Idle Pose
-                // Legs straight down
-                ctx.fillRect(pX + torsoRelX, legYPos, legW, legH); // Left leg
-                ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos, legW, legH); // Right leg
-                // Arms straight down
-                ctx.fillRect(pX + torsoRelX - armW, armYPos, armW, armH); // Left arm
-                ctx.fillRect(pX + torsoRelX + torsoW, armYPos, armW, armH); // Right arm
+            } else { 
+                ctx.fillRect(pX + torsoRelX, legYPos, legW, legH); 
+                ctx.fillRect(pX + torsoRelX + torsoW - legW, legYPos, legW, legH); 
+                ctx.fillRect(pX + torsoRelX - armW, armYPos, armW, armH); 
+                ctx.fillRect(pX + torsoRelX + torsoW, armYPos, armW, armH); 
             }
         }
         ctx.restore();
@@ -630,7 +626,7 @@ export default function PixelJumperGame() {
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use on-screen buttons" : "Use Arrow Keys or A/D"} for left/right movement.</li>
           <li>{isMobile ? "Tap the large up arrow button" : "Press Spacebar, W, or Up Arrow"} to jump.</li>
-          <li>Collect <span className="font-semibold" style={{color: getThemeColor('--accent')}}>light gray items</span> for points.</li>
+          <li>Collect <span className="font-semibold" style={{color: getThemeColor('--primary')}}>glowing purple items</span> for points.</li>
           <li>Avoid <span className="font-semibold" style={{color: getThemeColor('--destructive')}}>red enemies & traps</span>!</li>
           <li>Don't fall off the screen! Survive as long as you can.</li>
           <li>{isMobile ? "Use game's menu options" : "Press Esc"} to return to the main menu.</li>
