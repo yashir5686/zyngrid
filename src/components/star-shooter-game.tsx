@@ -28,16 +28,36 @@ const PLAYER_SHOOT_INTERVAL = 300;
 
 type GameState = 'menu' | 'playing' | 'game_over';
 
-// SVG path data for the player ship (40x30 dimensions)
 const playerBodySVGPath = "M20 0 L16 4 L12 4 L12 8 L8 8 L8 12 L4 12 L4 20 L8 20 L8 24 L12 24 L12 28 L16 28 L16 20 L24 20 L24 28 L28 28 L28 24 L32 24 L32 20 L36 20 L36 12 L32 12 L32 8 L28 8 L28 4 L24 4 L20 0 Z M16 12 L24 12 L24 16 L16 16 L16 12 Z";
 const playerThrusterSVGPath = "M16 28 L24 28 L24 30 L16 30 Z";
 
 let playerBodyPath2D: Path2D | null = null;
 let playerThrusterPath2D: Path2D | null = null;
 
+// Enemy Path Data (approximating the provided SVG style for a 35x30 area)
+// Variant A: Star-like shape from SVG
+const ENEMY_A_OUTER_PATH_DATA = "M17.5,0 L12.5,5 L12.5,10 L7.5,10 L7.5,12.5 L2.5,12.5 L2.5,17.5 L7.5,17.5 L7.5,20 L12.5,20 L12.5,25 L17.5,30 L22.5,25 L22.5,20 L27.5,20 L27.5,17.5 L32.5,17.5 L32.5,12.5 L27.5,12.5 L27.5,10 L22.5,10 L22.5,5 Z";
+// Central plus for Variant A, made of two rectangles
+const ENEMY_A_INNER_PLUS_RECT1_PATH_DATA = "M11.25,13.75 h12.5 v2.5 h-12.5 Z"; // Horizontal bar
+const ENEMY_A_INNER_PLUS_RECT2_PATH_DATA = "M16.25,8.75 h2.5 v12.5 h-2.5 Z"; // Vertical bar
+
+// Variant B: Simpler diamond shape
+const ENEMY_B_PATH_DATA = "M17.5,5 L27.5,15 L17.5,25 L7.5,15 Z";
+
+let enemyOuterPathA: Path2D | null = null;
+let enemyInnerPathAPlusRect1: Path2D | null = null;
+let enemyInnerPathAPlusRect2: Path2D | null = null;
+let enemyPathB: Path2D | null = null;
+
+
 if (typeof window !== 'undefined') {
   playerBodyPath2D = new Path2D(playerBodySVGPath);
   playerThrusterPath2D = new Path2D(playerThrusterSVGPath);
+
+  enemyOuterPathA = new Path2D(ENEMY_A_OUTER_PATH_DATA);
+  enemyInnerPathAPlusRect1 = new Path2D(ENEMY_A_INNER_PLUS_RECT1_PATH_DATA);
+  enemyInnerPathAPlusRect2 = new Path2D(ENEMY_A_INNER_PLUS_RECT2_PATH_DATA);
+  enemyPathB = new Path2D(ENEMY_B_PATH_DATA);
 }
 
 
@@ -337,6 +357,7 @@ export default function StarShooterGame() {
           height: ENEMY_HEIGHT,
           speed: (ENEMY_BASE_SPEED + Math.random() * 1.0) * difficultyFactor,
           color: Math.random() > 0.5 ? enemyColor1 : enemyColor2,
+          variant: Math.random() < 0.6 ? 'A' : 'B', // Assign variant
         };
         setEnemies(prev => [...prev, newEnemy]); 
         lastEnemySpawnTime.current = currentTime;
@@ -373,6 +394,7 @@ export default function StarShooterGame() {
     const fgColor = getThemeColor('--foreground'); 
     const playerColor = player?.color || getThemeColor('--accent'); 
     const bulletColor = getThemeColor('--accent');
+    const enemyAccentColor = getThemeColor('--accent');
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, LOGIC_CANVAS_WIDTH, LOGIC_CANVAS_HEIGHT);
@@ -389,15 +411,10 @@ export default function StarShooterGame() {
       if (playerToDraw && gameState === 'playing' && playerBodyPath2D && playerThrusterPath2D) { 
         ctx.save();
         ctx.translate(playerToDraw.x, playerToDraw.y);
-
-        // Draw body
         ctx.fillStyle = playerToDraw.color || playerColor;
         ctx.fill(playerBodyPath2D);
-
-        // Draw thruster
         ctx.fillStyle = getThemeColor('--destructive');
         ctx.fill(playerThrusterPath2D);
-        
         ctx.restore();
       }
 
@@ -408,9 +425,21 @@ export default function StarShooterGame() {
       });
 
       enemiesForCollisionRef.current.forEach(enemy => {
-        const currentEnemyColor = enemy.color || getThemeColor('--destructive');
-        ctx.fillStyle = currentEnemyColor;
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        ctx.save();
+        ctx.translate(enemy.x, enemy.y);
+        ctx.fillStyle = enemy.color || getThemeColor('--destructive');
+
+        if (enemy.variant === 'A' && enemyOuterPathA && enemyInnerPathAPlusRect1 && enemyInnerPathAPlusRect2) {
+          ctx.fill(enemyOuterPathA);
+          ctx.fillStyle = enemyAccentColor; // Bright center for variant A
+          ctx.fill(enemyInnerPathAPlusRect1);
+          ctx.fill(enemyInnerPathAPlusRect2);
+        } else if (enemy.variant === 'B' && enemyPathB) {
+          ctx.fill(enemyPathB);
+        } else { // Fallback to simple rect if paths are not ready or variant is unknown
+          ctx.fillRect(0, 0, enemy.width, enemy.height);
+        }
+        ctx.restore();
       });
 
       ctx.fillStyle = fgColor; 
@@ -445,9 +474,9 @@ export default function StarShooterGame() {
         <Card className="w-full max-w-md bg-card/90 shadow-xl text-center border-border"> 
           <CardHeader>
             <CardTitle 
-              className="text-3xl md:text-4xl font-headline text-foreground flex items-center justify-center gap-2"
+              className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2"
             >
-                <Gamepad2 size={isMobile ? 30: 36} className="text-primary" /> Star Shooter
+                <Gamepad2 size={isMobile ? 30: 36} /> Star Shooter
             </CardTitle>
             <CardContent className="text-muted-foreground text-sm md:text-base pt-2">Blast through endless waves of aliens! Your ship fires automatically.</CardContent>
           </CardHeader>

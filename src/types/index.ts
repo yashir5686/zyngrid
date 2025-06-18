@@ -59,6 +59,7 @@ export interface Bullet extends StarShooterEntity {
 export interface EnemyShip extends StarShooterEntity {
   speed: number;
   health?: number; // Optional: for more complex enemies
+  variant: 'A' | 'B'; // To determine which SVG path to use
 }
 
 export interface Star {
