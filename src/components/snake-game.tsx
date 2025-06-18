@@ -35,42 +35,27 @@ export default function SnakeGame() {
   const [cellSize, setCellSize] = useState(MAX_CANVAS_WIDTH / GRID_SIZE);
 
   const [colorValues, setColorValues] = useState({
-    card: '220 11% 20%',
-    border: '220 11% 30%',
-    accent: '197 84% 54%',
-    accentForeground: '0 0% 98%',
-    primary: '286 82% 54%',
-    primaryForeground: '0 0% 98%',
-    background: '220 11% 15%',
-    foreground: '0 0% 98%',
-    destructiveHslComps: '0 72% 51%',
+    card: 'var(--card)', // Use CSS variables directly
+    border: 'var(--border)',
+    accent: 'var(--accent)',
+    accentForeground: 'var(--accent-foreground)',
+    primary: 'var(--primary)',
+    primaryForeground: 'var(--primary-foreground)',
+    background: 'var(--background)',
+    foreground: 'var(--foreground)',
+    destructiveHslComps: 'var(--destructive)', // Renamed for clarity
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && document.documentElement) {
-      const computedStyle = getComputedStyle(document.documentElement);
-      setColorValues({
-        card: computedStyle.getPropertyValue('--card').trim(),
-        border: computedStyle.getPropertyValue('--border').trim(),
-        accent: computedStyle.getPropertyValue('--accent').trim(),
-        accentForeground: computedStyle.getPropertyValue('--accent-foreground').trim(),
-        primary: computedStyle.getPropertyValue('--primary').trim(),
-        primaryForeground: computedStyle.getPropertyValue('--primary-foreground').trim(),
-        background: computedStyle.getPropertyValue('--background').trim(),
-        foreground: computedStyle.getPropertyValue('--foreground').trim(),
-        destructiveHslComps: computedStyle.getPropertyValue('--destructive').trim(),
-      });
-    }
-  }, []);
-
-  useEffect(() => {
+    // No need to fetch computed styles if using CSS variables directly in draw logic
     setHighScoreState(getHighScore('snake'));
   }, []);
+
 
   const updateCanvasDimensions = useCallback(() => {
     if (typeof window !== 'undefined') {
       const screenWidth = window.innerWidth;
-      const newSize = Math.min(MAX_CANVAS_WIDTH, screenWidth - (isMobile ? 32 : 64)); // Smaller padding on mobile
+      const newSize = Math.min(MAX_CANVAS_WIDTH, screenWidth - (isMobile ? 32 : 64)); 
       setCanvasSize({ width: newSize, height: newSize });
       setCellSize(newSize / GRID_SIZE);
     }
@@ -192,10 +177,10 @@ export default function SnakeGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.fillStyle = `hsl(${colorValues.card})`;
+    ctx.fillStyle = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--card').trim()})`;
     ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
-    ctx.strokeStyle = `hsl(${colorValues.border})`;
+    ctx.strokeStyle = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--border').trim()})`;
     for (let i = 0; i <= GRID_SIZE; i++) {
         ctx.beginPath();
         ctx.moveTo(i * cellSize, 0);
@@ -206,19 +191,31 @@ export default function SnakeGame() {
         ctx.lineTo(canvasSize.width, i * cellSize);
         ctx.stroke();
     }
-
-    ctx.fillStyle = `hsl(${colorValues.accent})`;
+    
+    const foodColor = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()})`;
+    ctx.fillStyle = foodColor;
     ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
-    ctx.strokeStyle = `hsl(${colorValues.accentForeground})`;
+    ctx.strokeStyle = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--accent-foreground').trim()})`;
     ctx.strokeRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
+    // Glow for food
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = foodColor;
+    ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize); // Redraw with shadow
+    ctx.shadowBlur = 0; // Reset shadow
 
-    ctx.fillStyle = `hsl(${colorValues.primary})`;
+    const snakeColor = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()})`;
+    ctx.fillStyle = snakeColor;
     snake.forEach((segment, index) => {
       ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
-      ctx.strokeStyle = `hsl(${colorValues.primaryForeground})`;
+      ctx.strokeStyle = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--primary-foreground').trim()})`;
       ctx.strokeRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
-      if (index === 0) {
-        ctx.fillStyle = `hsl(${colorValues.background})`;
+      if (index === 0) { // Snake Head
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = snakeColor;
+        ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize); // Redraw with shadow
+        ctx.shadowBlur = 0; // Reset shadow
+
+        ctx.fillStyle = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--background').trim()})`; // Eye color
         const eyeSize = cellSize / 5;
         const eyeOffset = cellSize / 4;
         if (direction === 'UP' || direction === 'DOWN') {
@@ -228,21 +225,21 @@ export default function SnakeGame() {
             ctx.fillRect(segment.x * cellSize + eyeOffset, segment.y * cellSize + eyeOffset, eyeSize, eyeSize);
             ctx.fillRect(segment.x * cellSize + eyeOffset, segment.y * cellSize + cellSize - eyeOffset - eyeSize, eyeSize, eyeSize);
         }
-        ctx.fillStyle = `hsl(${colorValues.primary})`; // Reset fillStyle for next segment
+        ctx.fillStyle = snakeColor; // Reset fillStyle for next segment
       }
     });
 
     if (!gameStarted && !gameOver) {
-      ctx.fillStyle = `hsla(${colorValues.foreground}, 0.8)`;
+      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim()}, 0.8)`;
       ctx.textAlign = 'center';
       ctx.font = `${Math.max(16, canvasSize.width / 20)}px "Space Grotesk", sans-serif`;
       ctx.fillText('Press "Start Game" to Play!', canvasSize.width / 2, canvasSize.height / 2);
     }
 
     if (gameOver) {
-      ctx.fillStyle = `hsla(${colorValues.destructiveHslComps}, 0.8)`;
+      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--destructive').trim()}, 0.8)`;
       ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
-      ctx.fillStyle = `hsl(${colorValues.foreground})`;
+      ctx.fillStyle = `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim()})`;
       ctx.textAlign = 'center';
       ctx.font = `bold ${Math.max(24, canvasSize.width / 12)}px "Space Grotesk", sans-serif`;
       ctx.fillText('Game Over!', canvasSize.width / 2, canvasSize.height / 2 - 20);
@@ -250,21 +247,26 @@ export default function SnakeGame() {
       ctx.fillText(`Final Score: ${score}`, canvasSize.width / 2, canvasSize.height / 2 + 20);
     }
 
-  }, [snake, food, gameOver, gameStarted, score, direction, colorValues, canvasSize, cellSize]);
+  }, [snake, food, gameOver, gameStarted, score, direction, canvasSize, cellSize]);
 
 
   return (
     <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
-      <Card className="w-full max-w-md bg-card/90 shadow-xl">
+      <Card className="w-full max-w-md bg-card/90 shadow-xl border-primary/50 border-2" style={{boxShadow: '0 0 15px hsl(var(--primary))'}}>
         <CardHeader>
-          <CardTitle className="text-2xl md:text-3xl font-headline text-primary text-center">Classic Snake</CardTitle>
+          <CardTitle 
+            className="text-2xl md:text-3xl font-headline text-primary text-center"
+            style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
+          >
+            Classic Snake
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <div className="flex justify-around w-full text-md md:text-lg">
-            <p className="font-semibold">Score: <span className="text-accent font-headline">{score}</span></p>
-            <p className="font-semibold flex items-center"><Trophy className="mr-1 md:mr-2 h-4 w-4 md:h-5 md:w-5 text-yellow-400" /> High Score: <span className="text-accent font-headline">{highScore}</span></p>
+            <p className="font-semibold text-foreground/80">Score: <span className="text-accent font-headline" style={{textShadow: '0 0 4px hsl(var(--accent))'}}>{score}</span></p>
+            <p className="font-semibold text-foreground/80 flex items-center"><Trophy className="mr-1 md:mr-2 h-4 w-4 md:h-5 md:w-5 text-yellow-400" /> High Score: <span className="text-accent font-headline" style={{textShadow: '0 0 4px hsl(var(--accent))'}}>{highScore}</span></p>
           </div>
-          <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: canvasSize.width, height: canvasSize.height }}>
+          <div className="border-2 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: canvasSize.width, height: canvasSize.height, boxShadow: 'inset 0 0 10px hsl(var(--primary))' }}>
             <canvas
               ref={canvasRef}
               width={canvasSize.width}
@@ -275,12 +277,16 @@ export default function SnakeGame() {
             />
           </div>
           {!gameStarted || gameOver ? (
-            <Button onClick={resetGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg">
+            <Button 
+              onClick={resetGame} 
+              size="lg" 
+              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]"
+            >
               <RefreshCcw className="mr-2 h-5 w-5" /> {gameOver ? 'Play Again' : 'Start Game'}
             </Button>
           ) : (
              <p className="text-muted-foreground text-xs md:text-sm text-center">
-               {isMobile ? "Use on-screen controls." : "Use arrow keys."} Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset.
+               {isMobile ? "Use on-screen controls." : "Use arrow keys."} Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">Esc</kbd> to reset.
              </p>
           )}
         </CardContent>
@@ -288,19 +294,19 @@ export default function SnakeGame() {
 
       {isMobile && gameStarted && !gameOver && (
         <div className="mt-4 grid grid-cols-3 gap-2 w-full max-w-xs">
-          <div></div> {/* Empty cell for layout */}
-          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('UP')} aria-label="Move Up">
+          <div></div> 
+          <Button variant="outline" className="aspect-square h-16 w-full bg-card/70 border-primary/70 hover:bg-primary/30 hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]" onClick={() => changeDirection('UP')} aria-label="Move Up">
             <ArrowUp size={32} />
           </Button>
-          <div></div> {/* Empty cell for layout */}
+          <div></div> 
 
-          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('LEFT')} aria-label="Move Left">
+          <Button variant="outline" className="aspect-square h-16 w-full bg-card/70 border-primary/70 hover:bg-primary/30 hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]" onClick={() => changeDirection('LEFT')} aria-label="Move Left">
             <ArrowLeft size={32} />
           </Button>
-          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('DOWN')} aria-label="Move Down">
+          <Button variant="outline" className="aspect-square h-16 w-full bg-card/70 border-primary/70 hover:bg-primary/30 hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]" onClick={() => changeDirection('DOWN')} aria-label="Move Down">
             <ArrowDown size={32} />
           </Button>
-          <Button variant="outline" className="aspect-square h-16 w-full" onClick={() => changeDirection('RIGHT')} aria-label="Move Right">
+          <Button variant="outline" className="aspect-square h-16 w-full bg-card/70 border-primary/70 hover:bg-primary/30 hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]" onClick={() => changeDirection('RIGHT')} aria-label="Move Right">
             <ArrowRight size={32} />
           </Button>
         </div>
@@ -310,10 +316,10 @@ export default function SnakeGame() {
         <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play</h3>
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use the on-screen buttons" : "Use Arrow Keys"} to control the snake.</li>
-          <li>Eat the <span className="text-accent font-semibold">blue food</span> to grow and score points.</li>
+          <li>Eat the <span className="text-accent font-semibold" style={{textShadow: '0 0 3px hsl(var(--accent))'}}>Lime Green food</span> to grow and score points.</li>
           <li>Avoid hitting the walls or your own tail.</li>
           <li>The game speeds up as you eat more food!</li>
-          <li>Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> to reset the game (desktop only).</li>
+          <li>Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">Esc</kbd> to reset the game (desktop only).</li>
         </ul>
       </div>
     </div>

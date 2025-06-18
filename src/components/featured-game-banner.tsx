@@ -24,9 +24,18 @@ export default function FeaturedGameBanner({ game }: FeaturedGameBannerProps) {
         )}
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/50 to-transparent flex flex-col justify-end p-8 md:p-12">
-        <h2 className="text-4xl md:text-5xl font-headline text-primary mb-3 drop-shadow-lg">{game.name}</h2>
+        <h2 
+          className="text-4xl md:text-5xl font-headline text-primary mb-3 drop-shadow-lg"
+          style={{ textShadow: '0 0 6px hsl(var(--primary)), 0 0 12px hsl(var(--primary))' }}
+        >
+          {game.name}
+        </h2>
         <p className="text-lg text-foreground/90 mb-6 max-w-2xl drop-shadow-sm">{game.description}</p>
-        <Button asChild size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground w-fit">
+        <Button 
+          asChild 
+          size="lg" 
+          className="bg-primary hover:bg-primary/80 text-primary-foreground w-fit hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]"
+        >
           <Link href={`/games/${game.slug}`}>
             <PlayCircle className="mr-2 h-6 w-6" /> Launch Game
           </Link>

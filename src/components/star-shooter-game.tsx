@@ -17,14 +17,14 @@ const PLAYER_HEIGHT = 30;
 const PLAYER_SPEED = 7;
 const BULLET_WIDTH = 5;
 const BULLET_HEIGHT = 15;
-const BULLET_SPEED = 7;
+const BULLET_SPEED = 7; // Was 10
 const ENEMY_WIDTH = 35;
 const ENEMY_HEIGHT = 30;
 const ENEMY_BASE_SPEED = 1.5;
-const ENEMY_SPAWN_INTERVAL = 1200;
+const ENEMY_SPAWN_INTERVAL = 1200; 
 const MAX_ENEMIES = 12;
 const STAR_COUNT = 100;
-const PLAYER_SHOOT_INTERVAL = 300;
+const PLAYER_SHOOT_INTERVAL = 300; 
 
 type GameState = 'menu' | 'playing' | 'game_over';
 
@@ -48,33 +48,28 @@ export default function StarShooterGame() {
 
   const [actualCanvasSize, setActualCanvasSize] = useState({ width: LOGIC_CANVAS_WIDTH, height: LOGIC_CANVAS_HEIGHT });
 
-  const [colorValues, setColorValues] = useState({
-    background: '220 11% 15%',
-    foreground: '0 0% 98%',
-    primary: '286 82% 54%',
-    accent: '197 84% 54%',
-    destructive: '0 72% 51%',
-    card: '220 11% 20%',
-    enemyColor1: '30 100% 50%',
-    enemyColor2: '60 100% 50%',
-    starColor: '0 0% 70%',
-  });
-
   const keysPressed = useRef<{ [key: string]: boolean }>({});
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && document.documentElement) {
-      const computedStyle = getComputedStyle(document.documentElement);
-      setColorValues(prev => ({
-        ...prev,
-        background: computedStyle.getPropertyValue('--background').trim(),
-        foreground: computedStyle.getPropertyValue('--foreground').trim(),
-        primary: computedStyle.getPropertyValue('--primary').trim(),
-        accent: computedStyle.getPropertyValue('--accent').trim(),
-        destructive: computedStyle.getPropertyValue('--destructive').trim(),
-        card: computedStyle.getPropertyValue('--card').trim(),
-      }));
+  const getThemeColor = useCallback((cssVariable: string) => {
+    if (typeof window !== 'undefined') {
+      return `hsl(${getComputedStyle(document.documentElement).getPropertyValue(cssVariable).trim()})`;
     }
+    // Fallback colors
+    switch (cssVariable) {
+      case '--background': return '#0B0C10';
+      case '--foreground': return '#E5E5E5';
+      case '--primary': return '#00FFFF';   
+      case '--accent': return '#39FF14';    
+      case '--destructive': return '#FF1493'; 
+      case '--card': return '#1C1D24';      
+      case '--secondary': return '#A020F0'; // Neon Purple as secondary
+      case '--muted': return '#2F2F3A';      
+      default: return '#FFFFFF';
+    }
+  }, []);
+
+
+  useEffect(() => {
     setHighScoreState(getHighScore('starshooter_highscore'));
   }, []);
 
@@ -106,17 +101,18 @@ export default function StarShooterGame() {
 
   const initStars = useCallback(() => {
     const newStars: Star[] = [];
+    const starBaseColor = getThemeColor('--muted-foreground'); // Softer color for stars
     for (let i = 0; i < STAR_COUNT; i++) {
       newStars.push({
         x: Math.random() * LOGIC_CANVAS_WIDTH,
         y: Math.random() * LOGIC_CANVAS_HEIGHT,
         size: Math.random() * 2 + 0.5,
         speed: Math.random() * 1 + 0.2,
-        color: `hsla(${colorValues.starColor}, ${Math.random() * 0.5 + 0.3})`
+        color: `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()}, ${Math.random() * 0.5 + 0.3})`
       });
     }
     setStars(newStars);
-  }, [colorValues.starColor]);
+  }, [getThemeColor]);
 
   const startGame = useCallback(() => {
     const initialPlayer: StarShooterPlayer = {
@@ -126,7 +122,7 @@ export default function StarShooterGame() {
       width: PLAYER_WIDTH,
       height: PLAYER_HEIGHT,
       speed: PLAYER_SPEED,
-      color: `hsl(${colorValues.primary})`,
+      color: getThemeColor('--primary'),
     };
     setPlayer(initialPlayer);
     playerRef.current = initialPlayer;
@@ -143,7 +139,7 @@ export default function StarShooterGame() {
     setGameState('playing');
     keysPressed.current = {};
     canvasRef.current?.focus();
-  }, [colorValues, initStars]);
+  }, [getThemeColor, initStars]);
 
   useEffect(() => {
     const gameActiveStates: GameState[] = ['playing', 'game_over'];
@@ -191,7 +187,6 @@ export default function StarShooterGame() {
       const currentTime = Date.now();
       let LOCAL_playerHitInThisTick = false;
 
-      // 1. Player Movement
       setPlayer(prevPlayer => {
         if (!prevPlayer || !playerRef.current) return prevPlayer;
         let newX = playerRef.current.x;
@@ -209,7 +204,6 @@ export default function StarShooterGame() {
         return prevPlayer;
       });
 
-      // 2. Decide if Player Shoots (create bullet object, don't add to state yet)
       let newBulletObjectForTick: Bullet | null = null;
       if (playerRef.current && (currentTime - lastPlayerShotTime.current > PLAYER_SHOOT_INTERVAL) && gameState === 'playing') {
         const p = playerRef.current;
@@ -220,20 +214,18 @@ export default function StarShooterGame() {
           width: BULLET_WIDTH,
           height: BULLET_HEIGHT,
           speed: BULLET_SPEED,
-          color: `hsl(${colorValues.accent})`,
+          color: getThemeColor('--accent'),
         };
         lastPlayerShotTime.current = currentTime;
       }
 
-      // 3. Update Enemies State (movement, off-screen culling)
       setEnemies(prevEnemies => {
         const movedEnemies = prevEnemies.map(e => ({ ...e, y: e.y + e.speed }));
         const currentFrameEnemies = movedEnemies.filter(e => e.y < LOGIC_CANVAS_HEIGHT);
-        enemiesForCollisionRef.current = currentFrameEnemies;
+        enemiesForCollisionRef.current = currentFrameEnemies; // Update ref for collision checks this tick
         return currentFrameEnemies;
       });
 
-      // 4. Perform Player-Enemy Collision Check
       const currentPlayer = playerRef.current;
       if (currentPlayer && gameState === 'playing') {
         for (const enemy of enemiesForCollisionRef.current) {
@@ -248,8 +240,7 @@ export default function StarShooterGame() {
           }
         }
       }
-
-      // 5. Update Bullets State & Bullet-Enemy Collisions (only if player wasn't hit)
+      
       if (!LOCAL_playerHitInThisTick && gameState === 'playing') {
         setBullets(prevBullets => {
           let currentTickBullets = [...prevBullets];
@@ -262,10 +253,10 @@ export default function StarShooterGame() {
           const hitEnemyIdsThisTick = new Set<string>();
 
           for (const bullet of movedBullets) {
-            if (bullet.y + bullet.height <= 0) continue; // Cull off-screen bullets
+            if (bullet.y + bullet.height <= 0) continue; 
 
             let bulletSurvivedThisCollisionPass = true;
-            for (const enemy of enemiesForCollisionRef.current) {
+            for (const enemy of enemiesForCollisionRef.current) { 
               if (hitEnemyIdsThisTick.has(enemy.id!)) continue;
 
               if (
@@ -287,13 +278,13 @@ export default function StarShooterGame() {
           if (hitEnemyIdsThisTick.size > 0) {
             const pointsEarnedThisTick = hitEnemyIdsThisTick.size * 10;
             setScore(s => {
-              const newScore = s + pointsEarnedThisTick;
-              scoreRef.current = newScore;
-              return newScore;
+              const newScoreVal = s + pointsEarnedThisTick;
+              scoreRef.current = newScoreVal;
+              return newScoreVal;
             });
             setEnemies(currentEnemiesState => {
               const remainingEnemiesAfterHits = currentEnemiesState.filter(e => !hitEnemyIdsThisTick.has(e.id!));
-              enemiesForCollisionRef.current = remainingEnemiesAfterHits;
+              enemiesForCollisionRef.current = remainingEnemiesAfterHits; 
               return remainingEnemiesAfterHits;
             });
           }
@@ -301,7 +292,6 @@ export default function StarShooterGame() {
         });
       }
 
-      // 6. Handle Game Over (if player was hit THIS tick)
       if (LOCAL_playerHitInThisTick && gameState === 'playing') {
         setHighScoreState(currentHighScoreVal => {
           if (scoreRef.current > currentHighScoreVal) {
@@ -313,16 +303,15 @@ export default function StarShooterGame() {
         setGameState('game_over');
       }
 
-      // 7. Spawn New Enemies (only if game is still playing and player wasn't hit)
-      // Use enemies.length (from state) for MAX_ENEMIES check, as it reflects enemies from start of tick.
-      // enemiesForCollisionRef.current.length could also be used here.
       if (
         currentTime - lastEnemySpawnTime.current > ENEMY_SPAWN_INTERVAL &&
-        enemies.length < MAX_ENEMIES && // Check against current state length
+        enemies.length < MAX_ENEMIES && 
         gameState === 'playing' &&
         !LOCAL_playerHitInThisTick
       ) {
         const difficultyFactor = 1 + Math.min(scoreRef.current / 500, 2.5);
+        const enemyColor1 = getThemeColor('--destructive');
+        const enemyColor2 = getThemeColor('--secondary'); // Using secondary for enemy variety
         const newEnemy: EnemyShip = {
           id: `enemy_${performance.now()}_${Math.random().toString(36).substring(2, 9)}`,
           x: Math.random() * (LOGIC_CANVAS_WIDTH - ENEMY_WIDTH),
@@ -330,13 +319,12 @@ export default function StarShooterGame() {
           width: ENEMY_WIDTH,
           height: ENEMY_HEIGHT,
           speed: (ENEMY_BASE_SPEED + Math.random() * 1.0) * difficultyFactor,
-          color: Math.random() > 0.5 ? `hsl(${colorValues.enemyColor1})` : `hsl(${colorValues.enemyColor2})`,
+          color: Math.random() > 0.5 ? enemyColor1 : enemyColor2,
         };
-        setEnemies(prev => [...prev, newEnemy]); // Add to the main state
+        setEnemies(prev => [...prev, newEnemy]); 
         lastEnemySpawnTime.current = currentTime;
       }
 
-      // 8. Update Stars
       setStars(prevStars => prevStars.map(star => {
           let newY = star.y + star.speed;
           if (newY > LOGIC_CANVAS_HEIGHT) {
@@ -349,7 +337,7 @@ export default function StarShooterGame() {
     }, 1000 / 60);
 
     return () => clearInterval(gameLoop);
-  }, [gameState, colorValues, initStars, enemies.length]); // enemies.length dependency for MAX_ENEMIES check
+  }, [gameState, getThemeColor, initStars, enemies.length]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -364,40 +352,56 @@ export default function StarShooterGame() {
     ctx.save();
     ctx.scale(scaleX, scaleY);
 
-    ctx.fillStyle = `hsl(${colorValues.background})`;
+    const bgColor = getThemeColor('--background');
+    const fgColor = getThemeColor('--foreground');
+    const playerColor = player?.color || getThemeColor('--primary');
+    const bulletColor = getThemeColor('--accent');
+    const cardColor = getThemeColor('--card');
+
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, LOGIC_CANVAS_WIDTH, LOGIC_CANVAS_HEIGHT);
 
     stars.forEach(star => {
-      ctx.fillStyle = star.color || `hsla(${colorValues.starColor}, 0.7)`;
+      ctx.fillStyle = star.color || getThemeColor('--muted-foreground');
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
       ctx.fill();
     });
 
     if (gameState !== 'menu') {
-      const playerToDraw = playerRef.current || player;
-      if (playerToDraw && gameState === 'playing') { // Only draw player if playing
-        ctx.fillStyle = playerToDraw.color || `hsl(${colorValues.primary})`;
+      const playerToDraw = playerRef.current || player; // Use ref for latest position if available
+      if (playerToDraw && gameState === 'playing') { 
+        ctx.fillStyle = playerToDraw.color || playerColor;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = playerToDraw.color || playerColor;
         ctx.beginPath();
         ctx.moveTo(playerToDraw.x + playerToDraw.width / 2, playerToDraw.y);
         ctx.lineTo(playerToDraw.x, playerToDraw.y + playerToDraw.height);
         ctx.lineTo(playerToDraw.x + playerToDraw.width, playerToDraw.y + playerToDraw.height);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
       bullets.forEach(bullet => {
-        ctx.fillStyle = bullet.color || `hsl(${colorValues.accent})`;
+        const currentBulletColor = bullet.color || bulletColor;
+        ctx.fillStyle = currentBulletColor;
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = currentBulletColor;
         ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        ctx.shadowBlur = 0;
       });
 
-      // Use enemiesForCollisionRef for rendering to reflect enemies present in the current frame
       enemiesForCollisionRef.current.forEach(enemy => {
-        ctx.fillStyle = enemy.color || `hsl(${colorValues.destructive})`;
+        const currentEnemyColor = enemy.color || getThemeColor('--destructive');
+        ctx.fillStyle = currentEnemyColor;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = currentEnemyColor;
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        ctx.shadowBlur = 0;
       });
 
-      ctx.fillStyle = `hsl(${colorValues.foreground})`;
+      ctx.fillStyle = fgColor;
       ctx.font = '20px "Space Grotesk", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`Score: ${score}`, 10, 30);
@@ -406,38 +410,48 @@ export default function StarShooterGame() {
     }
 
     if (gameState === 'game_over') {
-      ctx.fillStyle = `hsla(${colorValues.card}, 0.9)`;
+      ctx.fillStyle = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--card').trim()}, 0.9)`;
       ctx.fillRect(LOGIC_CANVAS_WIDTH / 4, LOGIC_CANVAS_HEIGHT / 2 - 60, LOGIC_CANVAS_WIDTH / 2, 120);
 
-      ctx.fillStyle = `hsl(${colorValues.foreground})`;
+      ctx.fillStyle = fgColor;
       ctx.textAlign = 'center';
       ctx.font = 'bold 28px "Space Grotesk", sans-serif';
+      ctx.shadowColor = getThemeColor('--primary');
+      ctx.shadowBlur = 5;
       ctx.fillText('Game Over!', LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 - 20);
+      ctx.shadowBlur = 0;
+
       ctx.font = '18px "Space Grotesk", sans-serif';
       ctx.fillText(`Final Score: ${score}`, LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 + 10);
       ctx.fillText(`High Score: ${highScore}`, LOGIC_CANVAS_WIDTH / 2, LOGIC_CANVAS_HEIGHT / 2 + 35);
     }
-
     ctx.restore();
 
-  }, [gameState, player, bullets, enemies, stars, score, highScore, colorValues, actualCanvasSize]);
+  }, [gameState, player, bullets, enemies, stars, score, highScore, actualCanvasSize, getThemeColor]);
 
 
   if (gameState === 'menu') {
     return (
       <div className="flex flex-col items-center justify-center p-4 min-h-[70vh] gap-6 w-full">
-        <Card className="w-full max-w-md bg-card/90 shadow-xl text-center">
+        <Card className="w-full max-w-md bg-card/90 shadow-xl text-center border-primary/50 border-2" style={{boxShadow: '0 0 20px hsl(var(--primary))'}}>
           <CardHeader>
-            <CardTitle className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2">
+            <CardTitle 
+              className="text-3xl md:text-4xl font-headline text-primary flex items-center justify-center gap-2"
+              style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
+            >
                 <Gamepad2 size={isMobile ? 30: 36} /> Star Shooter
             </CardTitle>
             <CardContent className="text-muted-foreground text-sm md:text-base pt-2">Blast through endless waves of aliens! Your ship fires automatically.</CardContent>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg">
+            <Button 
+              onClick={startGame} 
+              size="lg" 
+              className="bg-primary hover:bg-primary/80 text-primary-foreground font-headline text-base md:text-lg hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]"
+            >
               <Play className="mr-2" /> Start Game
             </Button>
-             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: {highScore}</p>
+             <p className="text-xs md:text-sm text-muted-foreground pt-2">Current High Score: <span className="text-accent font-semibold" style={{textShadow: '0 0 3px hsl(var(--accent))'}}>{highScore}</span></p>
           </CardContent>
         </Card>
       </div>
@@ -446,17 +460,20 @@ export default function StarShooterGame() {
 
   return (
     <div className="flex flex-col items-center gap-4 p-2 md:p-8 w-full">
-      <Card className="w-full bg-card/90 shadow-xl overflow-hidden" style={{maxWidth: actualCanvasSize.width }}>
+      <Card className="w-full bg-card/90 shadow-xl overflow-hidden border-primary/30 border" style={{maxWidth: actualCanvasSize.width, boxShadow: '0 0 10px hsl(var(--primary))'}}>
         <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl md:text-3xl font-headline text-primary">
+            <CardTitle 
+              className="text-2xl md:text-3xl font-headline text-primary"
+              style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
+            >
               Star Shooter
             </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4 p-2 sm:p-4">
-            <div className="border-4 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height }}>
+            <div className="border-2 border-primary rounded-md overflow-hidden shadow-inner bg-background" style={{ width: actualCanvasSize.width, height: actualCanvasSize.height, boxShadow: 'inset 0 0 10px hsl(var(--primary))' }}>
                 <canvas
                 ref={canvasRef}
-                width={actualCanvasSize.width}
+                width={actualCanvasSize.width} 
                 height={actualCanvasSize.height}
                 aria-label="Star Shooter game board"
                 role="img"
@@ -465,29 +482,29 @@ export default function StarShooterGame() {
             </div>
           {gameState === 'game_over' && (
             <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 mt-4">
-              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base">
+              <Button onClick={startGame} size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground text-sm sm:text-base hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]">
                 <RotateCcw className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Try Again
               </Button>
-              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base">
+              <Button onClick={() => setGameState('menu')} size="lg" variant="outline" className="text-sm sm:text-base border-primary/70 hover:bg-primary/20 hover:text-primary hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]">
                 <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Main Menu
               </Button>
             </div>
           )}
            {gameState === 'playing' && !isMobile && (
-             <p className="text-muted-foreground text-xs md:text-sm text-center">Use <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Arrow Keys</kbd> or <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">A</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">D</kbd> to move. Ship fires automatically. Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> for menu.</p>
+             <p className="text-muted-foreground text-xs md:text-sm text-center">Use <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">Arrow Keys</kbd> or <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">A</kbd>/<kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">D</kbd> to move. Ship fires automatically. Press <kbd className="px-1 md:px-2 py-0.5 md:py-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">Esc</kbd> for menu.</p>
            )}
            {gameState === 'playing' && isMobile && (
-             <p className="text-muted-foreground text-xs text-center">Use on-screen controls to move. Ship fires automatically. Press <kbd className="px-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Esc</kbd> icon for menu (if available).</p>
+             <p className="text-muted-foreground text-xs text-center">Use on-screen controls to move. Ship fires automatically. Press <kbd className="px-1 text-xs font-semibold text-background bg-foreground/70 border border-border rounded-lg">Esc</kbd> icon for menu (if available).</p>
            )}
         </CardContent>
       </Card>
 
       {isMobile && gameState === 'playing' && (
-        <div className="fixed bottom-4 left-4 right-4 flex justify-between items-center z-10 p-2 bg-card/50 rounded-lg">
+        <div className="fixed bottom-4 left-4 right-4 flex justify-between items-center z-10 p-2 bg-card/50 rounded-lg backdrop-blur-sm">
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="aspect-square h-16 w-16"
+              className="aspect-square h-16 w-16 bg-card/70 border-primary/70 hover:bg-primary/30 hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]"
               onTouchStart={() => handleMobileMove('left')}
               onTouchEnd={() => handleMobileMove('stop')}
               onClick={() => handleMobileMove('left')}
@@ -497,7 +514,7 @@ export default function StarShooterGame() {
             </Button>
             <Button
               variant="outline"
-              className="aspect-square h-16 w-16"
+              className="aspect-square h-16 w-16 bg-card/70 border-primary/70 hover:bg-primary/30 hover:shadow-[0_0_8px_1px_hsl(var(--primary)),_0_0_15px_3px_hsla(var(--primary)/0.4)]"
               onTouchStart={() => handleMobileMove('right')}
               onTouchEnd={() => handleMobileMove('stop')}
               onClick={() => handleMobileMove('right')}
@@ -506,8 +523,8 @@ export default function StarShooterGame() {
               <MoveRight size={32} />
             </Button>
           </div>
-          <div className="aspect-square h-20 w-20 rounded-full flex items-center justify-center bg-card/30" aria-hidden="true">
-            <Pointer size={40} className="text-muted-foreground opacity-50" />
+          <div className="aspect-square h-20 w-20 rounded-full flex items-center justify-center bg-card/30 border border-primary/50" aria-hidden="true">
+            <Pointer size={40} className="text-primary opacity-70" />
           </div>
         </div>
       )}
@@ -516,8 +533,8 @@ export default function StarShooterGame() {
         <h3 className="text-lg md:text-xl font-headline text-foreground mb-1 md:mb-2">How to Play Star Shooter</h3>
         <ul className="list-disc list-inside text-left space-y-0.5 md:space-y-1">
           <li>{isMobile ? "Use on-screen buttons" : "Use Arrow Keys or A/D"} for left/right movement.</li>
-          <li>Your ship fires bullets automatically!</li>
-          <li>Destroy enemy ships to score points.</li>
+          <li>Your ship fires <span className="text-accent font-semibold" style={{textShadow: '0 0 3px hsl(var(--accent))'}}>Lime Green bullets</span> automatically!</li>
+          <li>Destroy <span className="font-semibold" style={{color: getThemeColor('--destructive'), textShadow: `0 0 3px ${getThemeColor('--destructive')}`}}>enemy ships</span> to score points.</li>
           <li>Avoid colliding with enemy ships.</li>
           <li>The game gets faster as your score increases!</li>
           <li>{isMobile ? "Use game's menu options" : "Press Esc"} to return to the main menu.</li>

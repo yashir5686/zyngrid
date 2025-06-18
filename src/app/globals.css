@@ -4,90 +4,89 @@
 
 @layer base {
   :root {
-    --background: 222 25% 10%; /* Deep Dark Blue-Charcoal */
-    --foreground: 210 10% 85%; /* Light Gray for text */
+    --background: 225 21% 5%; /* Deep Space Black #0B0C10 */
+    --foreground: 0 0% 90%; /* Soft Gray #E5E5E5 */
 
-    --card: 222 25% 14%; /* Slightly Lighter Dark Blue-Charcoal */
-    --card-foreground: 210 10% 85%;
+    --card: 225 21% 8%; /* Slightly Lighter Deep Space Black */
+    --card-foreground: 0 0% 90%;
 
-    --popover: 222 25% 12%; /* Darker Popover */
-    --popover-foreground: 210 10% 85%;
+    --popover: 225 20% 7%; /* Darker Popover */
+    --popover-foreground: 0 0% 90%;
 
-    --primary: 100 70% 50%; /* Electric Lime Green */
-    --primary-foreground: 222 25% 10%; /* Dark for contrast on Lime */
+    --primary: 180 100% 50%; /* Electric Blue #00FFFF */
+    --primary-foreground: 220 100% 10%; /* Very Dark Blue for text on Electric Blue */
 
-    --secondary: 222 20% 25%; /* Muted Dark Blue-Gray */
-    --secondary-foreground: 210 10% 85%;
+    --secondary: 285 87% 53%; /* Neon Purple #A020F0 */
+    --secondary-foreground: 0 0% 95%; /* Light text for Neon Purple */
 
-    --muted: 222 20% 20%; /* Darker Muted Blue-Gray */
-    --muted-foreground: 210 10% 60%; /* Softer Gray for muted text */
+    --muted: 225 20% 12%; /* Darker Muted */
+    --muted-foreground: 0 0% 60%; /* Softer Gray for muted text */
 
-    --accent: 300 70% 60%; /* Vibrant Magenta/Purple */
-    --accent-foreground: 210 10% 95%; /* Very Light for contrast on Accent */
+    --accent: 105 100% 54%; /* Lime Green #39FF14 */
+    --accent-foreground: 220 100% 10%; /* Very Dark Blue for text on Lime Green */
 
-    --destructive: 0 65% 55%; /* Energetic Red */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 325 100% 54%; /* Hot Pink #FF1493 */
+    --destructive-foreground: 0 0% 95%; /* Light text for Hot Pink */
 
-    --border: 222 25% 25%; /* Subtle Border */
-    --input: 222 25% 18%; /* Dark Input Background */
-    --ring: 100 70% 55%; /* Primary color for rings */
+    --border: 180 50% 25%; /* Darker, less saturated Electric Blue for borders */
+    --input: 225 20% 10%; /* Dark Input Background */
+    --ring: 180 100% 55%; /* Brighter Electric Blue for rings */
 
-    --radius: 0.5rem;
+    --radius: 0.3rem; /* Sharper corners */
 
-    /* Chart colors - can be adjusted if charts are used */
-    --chart-1: 100 70% 50%; /* Primary */
-    --chart-2: 300 70% 60%; /* Accent */
-    --chart-3: 197 84% 54%; /* Original Electric Blue, kept for variety */
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    /* Chart colors */
+    --chart-1: 180 100% 50%; /* Electric Blue */
+    --chart-2: 105 100% 54%; /* Lime Green */
+    --chart-3: 285 87% 53%; /* Neon Purple */
+    --chart-4: 325 100% 54%; /* Hot Pink */
+    --chart-5: 210 100% 60%; /* Another shade of blue for variety */
 
-    /* Sidebar colors updated to match new theme */
-    --sidebar-background: 222 25% 8%; /* Even Deeper Dark for Sidebar */
-    --sidebar-foreground: 210 10% 80%;
-    --sidebar-primary: 100 70% 50%; /* Electric Lime Green */
-    --sidebar-primary-foreground: 222 25% 10%;
-    --sidebar-accent: 300 70% 60%; /* Vibrant Magenta/Purple */
-    --sidebar-accent-foreground: 210 10% 95%;
-    --sidebar-border: 222 25% 20%;
-    --sidebar-ring: 100 70% 55%;
+    /* Sidebar colors */
+    --sidebar-background: 225 21% 4%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 220 100% 10%;
+    --sidebar-accent: 105 100% 54%;
+    --sidebar-accent-foreground: 220 100% 10%;
+    --sidebar-border: 180 50% 20%;
+    --sidebar-ring: 180 100% 55%;
   }
 
   .dark {
-    /* Keeping .dark consistent with :root for this project as it's dark by default */
-    --background: 222 25% 10%;
-    --foreground: 210 10% 85%;
-    --card: 222 25% 14%;
-    --card-foreground: 210 10% 85%;
-    --popover: 222 25% 12%;
-    --popover-foreground: 210 10% 85%;
-    --primary: 100 70% 50%;
-    --primary-foreground: 222 25% 10%;
-    --secondary: 222 20% 25%;
-    --secondary-foreground: 210 10% 85%;
-    --muted: 222 20% 20%;
-    --muted-foreground: 210 10% 60%;
-    --accent: 300 70% 60%;
-    --accent-foreground: 210 10% 95%;
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 222 25% 25%;
-    --input: 222 25% 18%;
-    --ring: 100 70% 55%;
+    --background: 225 21% 5%;
+    --foreground: 0 0% 90%;
+    --card: 225 21% 8%;
+    --card-foreground: 0 0% 90%;
+    --popover: 225 20% 7%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 220 100% 10%;
+    --secondary: 285 87% 53%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 225 20% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 105 100% 54%;
+    --accent-foreground: 220 100% 10%;
+    --destructive: 325 100% 54%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 180 50% 25%;
+    --input: 225 20% 10%;
+    --ring: 180 100% 55%;
 
-    --chart-1: 100 70% 50%;
-    --chart-2: 300 70% 60%;
-    --chart-3: 197 84% 54%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-1: 180 100% 50%;
+    --chart-2: 105 100% 54%;
+    --chart-3: 285 87% 53%;
+    --chart-4: 325 100% 54%;
+    --chart-5: 210 100% 60%;
 
-    --sidebar-background: 222 25% 8%;
-    --sidebar-foreground: 210 10% 80%;
-    --sidebar-primary: 100 70% 50%;
-    --sidebar-primary-foreground: 222 25% 10%;
-    --sidebar-accent: 300 70% 60%;
-    --sidebar-accent-foreground: 210 10% 95%;
-    --sidebar-border: 222 25% 20%;
-    --sidebar-ring: 100 70% 55%;
+    --sidebar-background: 225 21% 4%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 220 100% 10%;
+    --sidebar-accent: 105 100% 54%;
+    --sidebar-accent-foreground: 220 100% 10%;
+    --sidebar-border: 180 50% 20%;
+    --sidebar-ring: 180 100% 55%;
   }
 }
 
@@ -96,6 +95,6 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
 }

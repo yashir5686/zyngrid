@@ -10,7 +10,10 @@ export default function HomePage() {
       {featuredGame && <FeaturedGameBanner game={featuredGame} />}
 
       <section className="my-12">
-        <h2 className="text-3xl font-headline mb-6 text-primary flex items-center">
+        <h2 
+          className="text-3xl font-headline mb-6 text-primary flex items-center"
+          style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
+        >
           <Gamepad2 className="mr-3 h-8 w-8 text-accent" /> All Games
         </h2>
         {allGamesData.length > 0 ? (

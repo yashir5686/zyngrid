@@ -37,7 +37,10 @@ export default function GameListClient() {
     <>
       {topGames.length > 0 && (
         <section className="my-12">
-          <h2 className="text-3xl font-headline mb-6 text-primary flex items-center">
+          <h2 
+            className="text-3xl font-headline mb-6 text-primary flex items-center"
+            style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
+          >
             <Star className="mr-3 h-8 w-8 text-accent" /> Top Games
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -50,7 +53,10 @@ export default function GameListClient() {
 
       {recentlyPlayedGames.length > 0 && (
         <section className="my-12">
-          <h2 className="text-3xl font-headline mb-6 text-primary flex items-center">
+          <h2 
+            className="text-3xl font-headline mb-6 text-primary flex items-center"
+            style={{ textShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary))' }}
+          >
             <History className="mr-3 h-8 w-8 text-accent" /> Recently Played
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
