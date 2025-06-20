@@ -3,30 +3,24 @@ import type { SVGProps } from 'react';
 
 export default function LogoIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      width="32" // Default width, can be overridden by props
-      height="32" // Default height, can be overridden by props
-      viewBox="0 0 100 100" // Standardized viewBox for the design
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      {...props}
-    >
-      {/* Bars on the left - Purple */}
-      <rect x="13" y="37" width="7" height="26" fill="hsl(var(--primary))" /> {/* Tallest bar */}
-      <rect x="23" y="27" width="7" height="46" fill="hsl(var(--primary))" /> {/* Middle height bar */}
-      <rect x="33" y="47" width="7" height="16" fill="hsl(var(--primary))" /> {/* Shortest bar */}
+    <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  
+  <rect width="100" height="100" rx="12" fill="#000000"/>
 
-      {/* Stylized 'Z' - White */}
-      <path
-        d="M43 33 H73 L53 67 H23 L43 33 Z"
-        fill="hsl(var(--foreground))"
-      />
+  
+  <path d="M 30 35 L 70 35 L 30 65 L 70 65" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
 
-      {/* Four purple circles on the right */}
-      <circle cx="80" cy="38" r="4" fill="hsl(var(--primary))" />
-      <circle cx="90" cy="38" r="4" fill="hsl(var(--primary))" />
-      <circle cx="80" cy="48" r="4" fill="hsl(var(--primary))" />
-      <circle cx="90" cy="48" r="4" fill="hsl(var(--primary))" />
-    </svg>
+  
+  <rect x="21" y="48" width="4" height="10" fill="#9B59B6"/>
+  <rect x="27" y="45" width="4" height="13" fill="#9B59B6"/>
+  <rect x="33" y="50" width="4" height="8" fill="#9B59B6"/>
+
+  
+  <circle cx="78" cy="48" r="2" fill="#9B59B6"/>
+  <circle cx="82" cy="52" r="2" fill="#9B59B6"/>
+  <circle cx="74" cy="52" r="2" fill="#9B59B6"/>
+  <circle cx="78" cy="56" r="2" fill="#9B59B6"/>
+</svg>
+
   );
 }
